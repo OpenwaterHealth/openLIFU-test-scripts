@@ -81,7 +81,7 @@ TEST_CASES = {
         'sequence_duration': 15 * 60  # seconds
     },
     5: {
-        'id': '60V_5min',
+        'id': '65V_5min',
         'description': 'High Voltage, Low Duty Cycle, 5min',
         'voltage': 65,
         'duty_cycle_pct': 5,
@@ -90,11 +90,12 @@ TEST_CASES = {
 }
 
 # Frequency choices (kHz)
-FREQUENCIES_KHZ = {1: 150, 2: 400}
+# FREQUENCIES_KHZ = {1: 150, 2: 400}
 
 # Pulse/sequence timing
-INTERVAL_MSEC_DEFAULT = 200
-NUM_MODULES_DEFAULT = 2
+INTERVAL_MSEC = {1: 100, 2: 200}  # Default to 100 ms interval
+NUM_MODULES = (1, 2)
+
 
 # Default safety / logging timing parameters
 CONSOLE_SHUTOFF_TEMP_C_DEFAULT = 70.0
@@ -159,9 +160,10 @@ class TestThermalStress:
         self.test_case_long_description: str | None = None
         self.test_case_id: str | None = None
         self.voltage: float | None = None
-        self.interval_msec: float = INTERVAL_MSEC_DEFAULT
         self.duration_msec: int | None = None
         self.sequence_duration: float | None = None
+        self.interval_msec: float | None = None
+        self.num_modules: int | None = None
 
         # Flags from args
         self.use_external_power = self.args.external_power
@@ -237,21 +239,59 @@ class TestThermalStress:
 
     # ------------------- User Input Section ------------------- #
     def _select_frequency(self) -> None:
+        """Select TX frequency in kHz (100–500), CLI override or interactive."""
+        # CLI override
+        if self.args.frequency is not None:
+            self.frequency_khz = self.args.frequency
+            return
+
+        while True:
+            choice = input("Enter TX frequency in kHz (100–500): ").strip()
+            try:
+                freq = int(choice)
+            except ValueError:
+                self.logger.info("Invalid input. Enter an integer value.")
+                continue
+
+            if 100 <= freq <= 500:
+                self.frequency_khz = freq
+                return
+
+            self.logger.info("Frequency must be between 100 and 500 kHz.")
+
+    def _select_interval_msec(self) -> None:
         """Interactively select frequency and predefined test case."""
         # Frequency selection
-        if self.args.frequency:
-            self.frequency_khz = self.args.frequency
-        else:
-            self.logger.info("Choose Frequency:")
-            for idx, freq in FREQUENCIES_KHZ.items():
-                self.logger.info("  %d. %d kHz", idx, freq)
+        if self.args.interval is not None:
+            self.interval_msec = self.args.interval
+            return
+        
+        # self.logger.info("Choose Interval:")
+        for idx, interval in INTERVAL_MSEC.items():
+            self.logger.info("%d. %d ms", idx, interval)
 
-            while True:
-                choice = input(f"Select frequency by number {list(FREQUENCIES_KHZ.keys())}: ").strip()
-                if choice.isdigit() and int(choice) in FREQUENCIES_KHZ:
-                    self.frequency_khz = FREQUENCIES_KHZ[int(choice)]
-                    break
-                self.logger.info("Invalid selection. Please try again.")
+        # valid_keys = list(INTERVAL_MSEC.keys())
+
+        while True:
+            choice = input(f"Select PRI by number {list(INTERVAL_MSEC)}: ")
+            if choice.isdigit() and int(choice) in INTERVAL_MSEC:
+                self.interval_msec = INTERVAL_MSEC[int(choice)]
+                break
+            self.logger.info("Invalid selection. Please try again.")
+
+    def _select_num_modules(self) -> None:
+        """Interactively select number of modules."""
+        # CLI override
+        if self.args.num_modules is not None:
+            self.num_modules = self.args.num_modules
+            return
+
+        while True:
+            choice = input(f"Select number of modules {list(NUM_MODULES)}: ")
+            if choice.isdigit() and int(choice) in NUM_MODULES:
+                self.num_modules = int(choice)
+                break
+            self.logger.info("Invalid selection. Please try again.")
 
     def _select_test_case(self) -> None:
         # Test case selection
@@ -406,11 +446,11 @@ class TestThermalStress:
 
         if num_tx_devices == 0:
             raise ValueError("No TX7332 devices found.")
-        elif num_tx_devices == self.args.num_modules * 2:
+        elif num_tx_devices == self.num_modules * 2:
             self.logger.info(f"Number of TX7332 devices found: {num_tx_devices}")
             return 32 * num_tx_devices
         else:
-            raise Exception(f"Number of TX7332 devices found: {num_tx_devices} != 2x{self.args.num_modules}")
+            raise Exception(f"Number of TX7332 devices found: {num_tx_devices} != 2x{self.num_modules}")
 
     def configure_solution(self) -> None:
         """Configure the beamforming solution and load it into the device."""
@@ -419,7 +459,7 @@ class TestThermalStress:
 
         db_path = self.openlifu_dir / "db_dvc"
         db = Database(db_path)
-        arr = db.load_transducer(f"openlifu_{self.args.num_modules}x400_evt1")
+        arr = db.load_transducer(f"openlifu_{self.num_modules}x400_evt1")
         arr.sort_by_pin()
 
         # Focus at (0, 0, 50 mm)
@@ -641,7 +681,9 @@ class TestThermalStress:
 
         try:
             # Interactive selection
+            self._select_num_modules()
             self._select_frequency()
+            self._select_interval_msec()
             self._select_test_case()
             self._derive_test_case_parameters()
 
@@ -743,6 +785,13 @@ class TestThermalStress:
             else:
                 self.logger.info("TEST FAILED: %s failed due to unexpected error.", self.test_case_description)
 
+def frequency_khz(value: str) -> int:
+    ivalue = int(value)
+    if not 100 <= ivalue <= 500:
+        raise argparse.ArgumentTypeError(
+            "frequency (kHz) must be between 100 and 500 kHz"
+        )
+    return ivalue
 
 def parse_arguments() -> argparse.Namespace:
     """Parse command-line arguments."""
@@ -796,14 +845,14 @@ Examples:
     behavior_group.add_argument(
         "--num-modules",
         type=int,
-        default=NUM_MODULES_DEFAULT,
+        default=None,
+        choices=NUM_MODULES,
         metavar="N",
-        help=f"Number of modules in the system (default: {NUM_MODULES_DEFAULT}).",
+        help=f"Number of modules connected.",
     )
     behavior_group.add_argument(
         "--frequency",
-        type=int,
-        choices=FREQUENCIES_KHZ.values(),
+        type=frequency_khz,
         default=None,
         metavar="KHZ",
         help="TX frequency in kHz (overrides interactive selection).",
@@ -816,7 +865,14 @@ Examples:
         metavar="N",
         help="Predefined test case number (overrides interactive selection).",
     )
-
+    behavior_group.add_argument(
+        "--interval",
+        type=int,
+        choices=tuple(INTERVAL_MSEC.values()),
+        default=None,
+        metavar="N",
+        help="Predefined interval in ms (overrides interactive selection).",
+    )
     # Safety thresholds
     safety_group = parser.add_argument_group("Safety Thresholds")
     safety_group.add_argument(
