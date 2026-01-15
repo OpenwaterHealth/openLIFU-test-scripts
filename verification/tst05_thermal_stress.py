@@ -322,6 +322,7 @@ class TestThermalStress:
             f"{self.frequency_khz}kHz, Case {self.test_case_num}: "
             f"{self.test_case['voltage']}V, "
             f"{self.test_case['duty_cycle_pct']}%, "
+            f"{self.interval_msec}ms PRI, " 
             f"{format_hhmmss(self.test_case['sequence_duration'])}"
         )
         self.test_case_id = f"{self.frequency_khz}kHz_{self.test_case['id']}"
