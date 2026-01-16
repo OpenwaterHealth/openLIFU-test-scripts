@@ -614,6 +614,7 @@ class TestThermalStress:
             time.sleep(self.temperature_check_interval)
 
         self.logger.warning("Temperature shutdown triggered.")
+        self.logger.info(f"Exiting test after running for %02d:%02d", *divmod(int(time.time() - start_time), 60))
         self.shutdown_event.set()
         self.temperature_shutdown_event.set()
 
