@@ -74,7 +74,7 @@ TEST_CASES = [
     {"voltage": 5,  "duty_cycle": 50, "PRI_ms": 200},
 ]
 
-DURATION_MIN = 10  # constant
+DURATION_MIN = 5  # constant
 
 # Frequency choices (kHz)
 # FREQUENCIES_KHZ = {1: 150, 2: 400}
@@ -155,7 +155,7 @@ class TestSonicationDuration:
         self.duration_msec: int | None = None
         self.num_modules: int | None = None
 
-        self.sequence_duration: float = DURATION_MIN * 60.0  # seconds
+        self.sequence_duration: float = DURATION_MIN  # seconds
 
         # Flags from args
         self.use_external_power = self.args.external_power
@@ -231,21 +231,39 @@ class TestSonicationDuration:
 
     # ------------------- User Input Section ------------------- #
     def _select_frequency(self) -> None:
-        """Interactively select frequency and predefined test case."""
-        # Frequency selection
-        if self.args.frequency:
+        """Select TX frequency in kHz (100–500), CLI override or interactive."""
+        # CLI override
+        if self.args.frequency is not None:
             self.frequency_khz = self.args.frequency
-        else:
-            self.logger.info("Choose Frequency:")
-            for idx, freq in FREQUENCIES_KHZ.items():
-                self.logger.info("  %d. %d kHz", idx, freq)
+            return
 
-            while True:
-                choice = input(f"Select frequency by number {list(FREQUENCIES_KHZ.keys())}: ").strip()
-                if choice.isdigit() and int(choice) in FREQUENCIES_KHZ:
-                    self.frequency_khz = FREQUENCIES_KHZ[int(choice)]
-                    break
-                self.logger.info("Invalid selection. Please try again.")
+        while True:
+            choice = input("Enter TX frequency in kHz (100–500): ").strip()
+            try:
+                freq = int(choice)
+            except ValueError:
+                self.logger.info("Invalid input. Enter an integer value.")
+                continue
+
+            if 100 <= freq <= 500:
+                self.frequency_khz = freq
+                return
+
+            self.logger.info("Frequency must be between 100 and 500 kHz.")
+
+    def _select_num_modules(self) -> None:
+        """Interactively select number of modules."""
+        # CLI override
+        if self.args.num_modules is not None:
+            self.num_modules = self.args.num_modules
+            return
+
+        while True:
+            choice = input(f"Select number of modules {list(NUM_MODULES)}: ")
+            if choice.isdigit() and int(choice) in NUM_MODULES:
+                self.num_modules = int(choice)
+                break
+            self.logger.info("Invalid selection. Please try again.")
 
     # def _select_test_case(self) -> None:
     #     # Test case selection
@@ -634,119 +652,137 @@ class TestSonicationDuration:
         test_status = "not started"
 
         try:
-            # Interactive selection
+            self._select_num_modules()
             self._select_frequency()
-            # self._select_test_case()
-            # self._derive_test_case_parameters()
+        except Exception as e:
+            self.logger.error("Error during initial selection: %s", e)
+            sys.exit(1)
 
-            # Connect and configure
-            if not self.hw_simulate:
-                self.connect_device()
-                self.verify_communication()
-                self.get_firmware_versions()
-                self.enumerate_devices()
-            else:
-                self.logger.info("Hardware simulation enabled; skipping device configuration.")
+        for case in TEST_CASES:
+            self.voltage = float(case["voltage"])
+            self.interval_msec = int(case["PRI_ms"])
+            self.duration_msec = int(case["duty_cycle"] / 100 * self.interval_msec)
+            
+            print(f"self.voltage: {self.voltage}")
+            print(f"self.duration_msec: {self.duration_msec}")
+            print(f"self.interval_msec: {self.interval_msec}")
 
-            # Optional start prompt
-            # if not self.args.no_prompt:
-            #     self.logger.info("Press enter to START %s: ", self.test_case_description)
-            #     input()
-
-            for case in enumerate(TEST_CASES, start=1):
-                self.voltage = float(case["voltage"])
-                self.duration_msec = int(case["duty_cycle"] / 100 * self.interval_msec)
-                self.interval_msec = int(case["PRI_ms"])
+            try:
+                # Interactive selection
                 
-                print(f"self.voltage: {self.voltage}")
-                print(f"self.duration_msec: {self.duration_msec}")
-                print(f"self.interval_msec: {self.interval_msec}")
+                # self._select_test_case()
+                # self._derive_test_case_parameters()
+
                 
-                self.configure_solution()
 
-                # Start sonication
-                if not self.hw_simulate:
-                    self.logger.info("Starting Trigger...")
-                    if not self.interface.start_sonication():
-                        self.logger.error("Failed to start trigger.")
-                        test_status = "error"
-                        return
-                else:
-                    self.logger.info("Simulated Trigger start... (no hardware)")
-
-                self.logger.info("Trigger Running... (Press CTRL-C to stop early)")
-                test_status = "running"
-
-                # Start monitoring threads
-                temp_thread = threading.Thread(
-                    target=self.monitor_temperature,
-                    name="TemperatureMonitorThread",
-                    daemon=True,
-                )
-                completion_thread = threading.Thread(
-                    target=self.exit_on_time_complete,
-                    args=(self.sequence_duration,),
-                    name="SequenceCompletionThread",
-                    daemon=True,
-                )
-
-                temp_thread.start()
-                completion_thread.start()
-
-                # Wait for threads or user interrupt
-                try:
-                    while temp_thread.is_alive() and completion_thread.is_alive() and not self.shutdown_event.is_set():
-                        time.sleep(0.1)
-                except KeyboardInterrupt:
-                    self.logger.warning("Test aborted by user KeyboardInterrupt.")
-                    test_status = "aborted by user"
-                    self.shutdown_event.set()
-
-                # Ensure shutdown event set
-                if not self.shutdown_event.is_set():
-                    self.logger.warning("A thread exited without setting shutdown event; forcing shutdown.")
-                    self.shutdown_event.set()
-
-                # Stop sonication
-                if not self.hw_simulate and self.interface is not None:
-                    try:
-                        if self.interface.stop_sonication():
-                            self.logger.info("Trigger stopped successfully.")
-                        else:
-                            self.logger.error("Failed to stop trigger.")
-                    except Exception as e:
-                        self.logger.error("Error stopping trigger: %s", e)
-
-                # Wait for threads to exit gracefully
-                temp_thread.join(timeout=2.0)
-                completion_thread.join(timeout=2.0)
-
-                # Determine final status
-                if test_status not in ("aborted by user", "error"):
-                    if self.sequence_complete_event.is_set():
-                        test_status = "passed"
-                    elif self.temperature_shutdown_event.is_set():
-                        test_status = "temperature shutdown"
+                    # Connect and configure
+                    if not self.hw_simulate:
+                        self.connect_device()
+                        self.verify_communication()
+                        self.get_firmware_versions()
+                        self.enumerate_devices()
                     else:
-                        test_status = "error"
+                        self.logger.info("Hardware simulation enabled; skipping device configuration.")
 
-        finally:
-            # Power down and cleanup
-            if not self.hw_simulate:
-                with contextlib.suppress(Exception):
-                    self.turn_off_console_and_tx()
-                self.cleanup_interface()
+                    # Optional start prompt
+                    # if not self.args.no_prompt:
+                    #     self.logger.info("Press enter to START %s: ", self.test_case_description)
+                    #     input()
 
-            # Final status log
-            if test_status == "passed":
-                self.logger.info("TEST PASSED: %s completed successfully.", self.test_case_description)
-            elif test_status == "temperature shutdown":
-                self.logger.info("TEST FAILED: %s failed due to temperature shutdown.", self.test_case_description)
-            elif test_status == "aborted by user":
-                self.logger.info("TEST ABORTED: %s aborted by user.", self.test_case_description)
-            else:
-                self.logger.info("TEST FAILED: %s failed due to unexpected error.", self.test_case_description)
+                
+                    
+                    self.configure_solution()
 
+                    # Start sonication
+                    if not self.hw_simulate:
+                        self.logger.info("Starting Trigger...")
+                        if not self.interface.start_sonication():
+                            self.logger.error("Failed to start trigger.")
+                            test_status = "error"
+                            return
+                    else:
+                        self.logger.info("Simulated Trigger start... (no hardware)")
+
+                    self.logger.info("Trigger Running... (Press CTRL-C to stop early)")
+                    test_status = "running"
+
+                    # Start monitoring threads
+                    temp_thread = threading.Thread(
+                        target=self.monitor_temperature,
+                        name="TemperatureMonitorThread",
+                        daemon=True,
+                    )
+                    completion_thread = threading.Thread(
+                        target=self.exit_on_time_complete,
+                        args=(self.sequence_duration,),
+                        name="SequenceCompletionThread",
+                        daemon=True,
+                    )
+
+                    temp_thread.start()
+                    completion_thread.start()
+
+                    # Wait for threads or user interrupt
+                    try:
+                        while temp_thread.is_alive() and completion_thread.is_alive() and not self.shutdown_event.is_set():
+                            time.sleep(0.1)
+                    except KeyboardInterrupt:
+                        self.logger.warning("Test aborted by user KeyboardInterrupt.")
+                        test_status = "aborted by user"
+                        self.shutdown_event.set()
+
+                    # Ensure shutdown event set
+                    if not self.shutdown_event.is_set():
+                        self.logger.warning("A thread exited without setting shutdown event; forcing shutdown.")
+                        self.shutdown_event.set()
+
+                    # Stop sonication
+                    if not self.hw_simulate and self.interface is not None:
+                        try:
+                            if self.interface.stop_sonication():
+                                self.logger.info("Trigger stopped successfully.")
+                            else:
+                                self.logger.error("Failed to stop trigger.")
+                        except Exception as e:
+                            self.logger.error("Error stopping trigger: %s", e)
+
+                    # Wait for threads to exit gracefully
+                    temp_thread.join(timeout=2.0)
+                    completion_thread.join(timeout=2.0)
+
+                    # Determine final status
+                    if test_status not in ("aborted by user", "error"):
+                        if self.sequence_complete_event.is_set():
+                            test_status = "passed"
+                        elif self.temperature_shutdown_event.is_set():
+                            test_status = "temperature shutdown"
+                        else:
+                            test_status = "error"
+
+            finally:
+                # Power down and cleanup
+                if not self.hw_simulate:
+                    with contextlib.suppress(Exception):
+                        self.turn_off_console_and_tx()
+                    self.cleanup_interface()
+
+                # Final status log
+                if test_status == "passed":
+                    self.logger.info("TEST PASSED: %s completed successfully.", self.test_case_description)
+                elif test_status == "temperature shutdown":
+                    self.logger.info("TEST FAILED: %s failed due to temperature shutdown.", self.test_case_description)
+                elif test_status == "aborted by user":
+                    self.logger.info("TEST ABORTED: %s aborted by user.", self.test_case_description)
+                else:
+                    self.logger.info("TEST FAILED: %s failed due to unexpected error.", self.test_case_description)
+
+def frequency_khz(value: str) -> int:
+    ivalue = int(value)
+    if not 100 <= ivalue <= 500:
+        raise argparse.ArgumentTypeError(
+            "frequency (kHz) must be between 100 and 500 kHz"
+        )
+    return ivalue
 
 def parse_arguments() -> argparse.Namespace:
     """Parse command-line arguments."""
@@ -800,14 +836,14 @@ Examples:
     behavior_group.add_argument(
         "--num-modules",
         type=int,
-        default=NUM_MODULES_DEFAULT,
+        default=None,
+        choices=NUM_MODULES,
         metavar="N",
-        help=f"Number of modules in the system (default: {NUM_MODULES_DEFAULT}).",
+        help=f"Number of modules connected.",
     )
     behavior_group.add_argument(
         "--frequency",
-        type=int,
-        choices=FREQUENCIES_KHZ.values(),
+        type=frequency_khz,
         default=None,
         metavar="KHZ",
         help="TX frequency in kHz (overrides interactive selection).",
