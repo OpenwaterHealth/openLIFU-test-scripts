@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-LIFU Thermal Stress Test Script
+LIFU Test Script to satisfy PRODREQS-85: Sonication Duration
 
 A professional command-line tool for automated thermal stress testing of LIFU devices.
 This script connects to the device, configures test parameters, monitors temperatures,
@@ -40,68 +40,41 @@ Thermal Stress Test Script
 """
 
 __version__ = "1.0.0"
-TEST_ID = "tst05_thermal_stress"
-TEST_NAME = "Thermal Stress Test"
+TEST_ID = Path(__file__).name.replace(".py", "")
+# TEST_NAME = "Thermal Stress Test"
 
-# ------------------- Test Case Definitions -------------------
-TEST_CASES = {
-    0: {
-        'id': 'dryrun',
-        'description': 'Dry Run Testing',
-        'voltage': 30,
-        'duty_cycle_pct': 5,
-        'sequence_duration': 10  # seconds
-    },
-    1: {
-        'id': '30v_2min',
-        'description': 'Medium Voltage, High Duty Cycle, 2min',
-        'voltage': 30,
-        'duty_cycle_pct': 50,
-        'sequence_duration': 2 * 60  # seconds
-    },
-    2: {
-        'id': '25v_5min',
-        'description': 'Low Voltage, High Duty Cycle, 5min',
-        'voltage': 25,
-        'duty_cycle_pct': 50,
-        'sequence_duration': 5 * 60  # seconds
-    },
-    3: {
-        'id':'20v_15min',
-        'description': 'Low Voltage, High Duty Cycle, 15min',
-        'voltage': 20,
-        'duty_cycle_pct': 50,
-        'sequence_duration': 15 * 60  # seconds
-    },
-    4: {
-        'id': '60V_15min',
-        'description': 'High Voltage, Low Duty Cycle, 15min',
-        'voltage': 60,
-        'duty_cycle_pct': 5,
-        'sequence_duration': 15 * 60  # seconds
-    },
-    5: {
-        'id': '65V_5min',
-        'description': 'High Voltage, Low Duty Cycle, 5min',
-        'voltage': 65,
-        'duty_cycle_pct': 5,
-        'sequence_duration': 100 * 60  # seconds
-    },
-    6: {
-        'id': '50V_10min',
-        'description': 'High Voltage, Low Duty Cycle, 10min',
-        'voltage': 50,
-        'duty_cycle_pct': 20,
-        'sequence_duration': 15 * 60  # seconds
-    },
-    7: {
-        'id': '45V_10min',
-        'description': 'High Voltage, Low Duty Cycle, 10min',
-        'voltage': 45,
-        'duty_cycle_pct': 25,
-        'sequence_duration': 10 * 60  # seconds
-    },
-}
+# ------------------- Test Case Definitions ------------------- #
+TEST_CASES = [
+    {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 100},
+    {"voltage": 60, "duty_cycle": 10, "PRI_ms": 100},
+    {"voltage": 55, "duty_cycle": 15, "PRI_ms": 100},
+    {"voltage": 50, "duty_cycle": 20, "PRI_ms": 100},
+    {"voltage": 45, "duty_cycle": 25, "PRI_ms": 100},
+    {"voltage": 40, "duty_cycle": 30, "PRI_ms": 100},
+    {"voltage": 35, "duty_cycle": 35, "PRI_ms": 100},
+    {"voltage": 30, "duty_cycle": 40, "PRI_ms": 100},
+    {"voltage": 25, "duty_cycle": 45, "PRI_ms": 100},
+    {"voltage": 20, "duty_cycle": 50, "PRI_ms": 100},
+    {"voltage": 15, "duty_cycle": 50, "PRI_ms": 100},
+    {"voltage": 10, "duty_cycle": 50, "PRI_ms": 100},
+    {"voltage": 5,  "duty_cycle": 50, "PRI_ms": 100},
+
+    {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 200},
+    {"voltage": 60, "duty_cycle": 10, "PRI_ms": 200},
+    {"voltage": 55, "duty_cycle": 15, "PRI_ms": 200},
+    {"voltage": 50, "duty_cycle": 20, "PRI_ms": 200},
+    {"voltage": 45, "duty_cycle": 25, "PRI_ms": 200},
+    {"voltage": 40, "duty_cycle": 30, "PRI_ms": 200},
+    {"voltage": 35, "duty_cycle": 35, "PRI_ms": 200},
+    {"voltage": 30, "duty_cycle": 40, "PRI_ms": 200},
+    {"voltage": 25, "duty_cycle": 45, "PRI_ms": 200},
+    {"voltage": 20, "duty_cycle": 50, "PRI_ms": 200},
+    {"voltage": 15, "duty_cycle": 50, "PRI_ms": 200},
+    {"voltage": 10, "duty_cycle": 50, "PRI_ms": 200},
+    {"voltage": 5,  "duty_cycle": 50, "PRI_ms": 200},
+]
+
+DURATION_MIN = 10  # constant
 
 # Frequency choices (kHz)
 # FREQUENCIES_KHZ = {1: 150, 2: 400}
@@ -109,7 +82,6 @@ TEST_CASES = {
 # Pulse/sequence timing
 INTERVAL_MSEC = {1: 100, 2: 200}  # Default to 100 ms interval
 NUM_MODULES = (1, 2)
-
 
 # Default safety / logging timing parameters
 CONSOLE_SHUTOFF_TEMP_C_DEFAULT = 70.0
@@ -141,9 +113,14 @@ def format_hhmmss(seconds: float) -> str:
         return f"{hours:d}:{minutes:02d}:{secs:02d}"
     return f"{minutes:02d}:{secs:02d}"
 
+def calculate_temperature_discharge_time_seconds(final_temp_C: float) -> float:
+    """Estimate time to discharge temperature to safe levels (dummy implementation)."""
+    # Placeholder: Implement a realistic model based on device thermal characteristics
+    baseline_temp_C = 30.0
+    minutes = 1
+    return 60.0*minutes # temp value until formula figured out
 
-
-class TestThermalStress:
+class TestSonicationDuration:
     """Main class for Thermal Stress Test 5."""
 
     def __init__(self, args):
@@ -174,10 +151,11 @@ class TestThermalStress:
         self.test_case_long_description: str | None = None
         self.test_case_id: str | None = None
         self.voltage: float | None = None
-        self.duration_msec: int | None = None
-        self.sequence_duration: float | None = None
         self.interval_msec: float | None = None
+        self.duration_msec: int | None = None
         self.num_modules: int | None = None
+
+        self.sequence_duration: float = DURATION_MIN * 60.0  # seconds
 
         # Flags from args
         self.use_external_power = self.args.external_power
@@ -194,7 +172,7 @@ class TestThermalStress:
         self.logger = self._setup_logging()
         self._file_handler_attached = False
 
-        self.logger.debug("ThermalStressTest initialized with arguments: %s", self.args)
+        self.logger.debug(f"{TEST_ID} initialized with arguments: {self.args}")
 
 
     def _setup_logging(self) -> logging.Logger:
@@ -253,81 +231,43 @@ class TestThermalStress:
 
     # ------------------- User Input Section ------------------- #
     def _select_frequency(self) -> None:
-        """Select TX frequency in kHz (100–500), CLI override or interactive."""
-        # CLI override
-        if self.args.frequency is not None:
-            self.frequency_khz = self.args.frequency
-            return
-
-        while True:
-            choice = input("Enter TX frequency in kHz (100–500): ").strip()
-            try:
-                freq = int(choice)
-            except ValueError:
-                self.logger.info("Invalid input. Enter an integer value.")
-                continue
-
-            if 100 <= freq <= 500:
-                self.frequency_khz = freq
-                return
-
-            self.logger.info("Frequency must be between 100 and 500 kHz.")
-
-    def _select_interval_msec(self) -> None:
         """Interactively select frequency and predefined test case."""
         # Frequency selection
-        if self.args.interval is not None:
-            self.interval_msec = self.args.interval
-            return
-        
-        # self.logger.info("Choose Interval:")
-        for idx, interval in INTERVAL_MSEC.items():
-            self.logger.info("%d. %d ms", idx, interval)
-
-        # valid_keys = list(INTERVAL_MSEC.keys())
-
-        while True:
-            choice = input(f"Select PRI by number {list(INTERVAL_MSEC)}: ")
-            if choice.isdigit() and int(choice) in INTERVAL_MSEC:
-                self.interval_msec = INTERVAL_MSEC[int(choice)]
-                break
-            self.logger.info("Invalid selection. Please try again.")
-
-    def _select_num_modules(self) -> None:
-        """Interactively select number of modules."""
-        # CLI override
-        if self.args.num_modules is not None:
-            self.num_modules = self.args.num_modules
-            return
-
-        while True:
-            choice = input(f"Select number of modules {list(NUM_MODULES)}: ")
-            if choice.isdigit() and int(choice) in NUM_MODULES:
-                self.num_modules = int(choice)
-                break
-            self.logger.info("Invalid selection. Please try again.")
-
-    def _select_test_case(self) -> None:
-        # Test case selection
-        if self.args.test_case is not None:
-            self.test_case_num = self.args.test_case
-            self.test_case = TEST_CASES[self.test_case_num]
+        if self.args.frequency:
+            self.frequency_khz = self.args.frequency
         else:
-            self.logger.info("\nAvailable Thermal Stress Test Cases:")
-            for idx, case in TEST_CASES.items():
-                total = format_hhmmss(case["sequence_duration"])
-                self.logger.info(
-                    f"{idx}. {case['voltage']}V, "
-                    f"{case['duty_cycle_pct']}% Duty Cycle, {total} total"
-                )
+            self.logger.info("Choose Frequency:")
+            for idx, freq in FREQUENCIES_KHZ.items():
+                self.logger.info("  %d. %d kHz", idx, freq)
 
             while True:
-                choice = input(f"Select a test case by number {list(TEST_CASES.keys())}: ").strip()
-                if choice.isdigit() and int(choice) in TEST_CASES:
-                    self.test_case_num = int(choice)
-                    self.test_case = TEST_CASES[self.test_case_num]
+                choice = input(f"Select frequency by number {list(FREQUENCIES_KHZ.keys())}: ").strip()
+                if choice.isdigit() and int(choice) in FREQUENCIES_KHZ:
+                    self.frequency_khz = FREQUENCIES_KHZ[int(choice)]
                     break
                 self.logger.info("Invalid selection. Please try again.")
+
+    # def _select_test_case(self) -> None:
+    #     # Test case selection
+    #     if self.args.test_case is not None:
+    #         self.test_case_num = self.args.test_case
+    #         self.test_case = TEST_CASES[self.test_case_num]
+    #     else:
+    #         self.logger.info("\nAvailable Thermal Stress Test Cases:")
+    #         for idx, case in TEST_CASES.items():
+    #             total = format_hhmmss(case["sequence_duration"])
+    #             self.logger.info(
+    #                 f"{idx}. {case['voltage']}V, "
+    #                 f"{case['duty_cycle_pct']}% Duty Cycle, {total} total"
+    #             )
+
+    #         while True:
+    #             choice = input(f"Select a test case by number {list(TEST_CASES.keys())}: ").strip()
+    #             if choice.isdigit() and int(choice) in TEST_CASES:
+    #                 self.test_case_num = int(choice)
+    #                 self.test_case = TEST_CASES[self.test_case_num]
+    #                 break
+    #             self.logger.info("Invalid selection. Please try again.")
 
     def _derive_test_case_parameters(self) -> None:
         # Derive test-case-specific parameters
@@ -336,7 +276,6 @@ class TestThermalStress:
             f"{self.frequency_khz}kHz, Case {self.test_case_num}: "
             f"{self.test_case['voltage']}V, "
             f"{self.test_case['duty_cycle_pct']}%, "
-            f"{self.interval_msec}ms PRI, " 
             f"{format_hhmmss(self.test_case['sequence_duration'])}"
         )
         self.test_case_id = f"{self.frequency_khz}kHz_{self.test_case['id']}"
@@ -359,7 +298,7 @@ class TestThermalStress:
 
     def connect_device(self) -> None:
         """Connect to the LIFU device and verify connection."""
-        self.logger.info("Starting %s...", TEST_NAME)
+        self.logger.info("Starting test...")
         self.interface = LIFUInterface(
             ext_power_supply=self.use_external_power,
             TX_test_mode=self.hw_simulate,
@@ -408,7 +347,6 @@ class TestThermalStress:
 
         if tx_connected:
             self.logger.info("  TX Connected: %s", tx_connected)
-            self.logger.info(f"  TX Temp: {self.interface.txdevice.get_temperature():.2f} °C")
             self.logger.info("LIFU Device fully connected.")
         else:
             self.logger.error("TX NOT fully connected.")
@@ -423,7 +361,6 @@ class TestThermalStress:
         try:
             if not self.args.external_power and not self.interface.hvcontroller.ping():
                 self.logger.error("Failed to ping the console device.")
-            return True
         except Exception as e:
             self.logger.error("Console Communication verification failed: %s", e)
             return False
@@ -450,8 +387,9 @@ class TestThermalStress:
             self.logger.error("Error retrieving console firmware version: %s", e)
 
         try:
-            tx_fw = self.interface.txdevice.get_version()
-            self.logger.info("TX Device Firmware Version: %s", tx_fw)
+            for i in range(1, self.args.num_modules+1):
+                tx_fw = self.interface.txdevice.get_version(module=i)
+                self.logger.info("TX Device %d Firmware Version: %s", i, tx_fw)
         except Exception as e:
             self.logger.error("Error retrieving TX device firmware version: %s", e)
 
@@ -462,11 +400,11 @@ class TestThermalStress:
 
         if num_tx_devices == 0:
             raise ValueError("No TX7332 devices found.")
-        elif num_tx_devices == self.num_modules * 2:
+        elif num_tx_devices == self.args.num_modules * 2:
             self.logger.info(f"Number of TX7332 devices found: {num_tx_devices}")
             return 32 * num_tx_devices
         else:
-            raise Exception(f"Number of TX7332 devices found: {num_tx_devices} != 2x{self.num_modules}")
+            raise Exception(f"Number of TX7332 devices found: {num_tx_devices} != 2x{self.args.num_modules}")
 
     def configure_solution(self) -> None:
         """Configure the beamforming solution and load it into the device."""
@@ -475,7 +413,7 @@ class TestThermalStress:
 
         db_path = self.openlifu_dir / "db_dvc"
         db = Database(db_path)
-        arr = db.load_transducer(f"openlifu_{self.num_modules}x400_evt1")
+        arr = db.load_transducer(f"openlifu_{self.args.num_modules}x400_evt1")
         arr.sort_by_pin()
 
         # Focus at (0, 0, 50 mm)
@@ -538,7 +476,7 @@ class TestThermalStress:
             self.logger.error("Interface is not initialized in monitor_temperature.")
             return
 
-        serial_failures = 0
+        # serial_failures = 0
         start_time = time.time()
         last_log_time = 0.0
 
@@ -629,7 +567,6 @@ class TestThermalStress:
             time.sleep(self.temperature_check_interval)
 
         self.logger.warning("Temperature shutdown triggered.")
-        self.logger.info(f"Exiting test after %dm%02ds", *divmod(int(time.time() - start_time), 60))
         self.shutdown_event.set()
         self.temperature_shutdown_event.set()
 
@@ -644,7 +581,7 @@ class TestThermalStress:
 
             time.sleep(.1)
             elapsed_time = time.time() - start
-            time_since_last_log = elapsed_time - last_log_time
+            # time_since_last_log = elapsed_time - last_log_time
 
             if elapsed_time >= total_test_time:
                 self.logger.info(
@@ -698,11 +635,9 @@ class TestThermalStress:
 
         try:
             # Interactive selection
-            self._select_num_modules()
             self._select_frequency()
-            self._select_interval_msec()
-            self._select_test_case()
-            self._derive_test_case_parameters()
+            # self._select_test_case()
+            # self._derive_test_case_parameters()
 
             # Connect and configure
             if not self.hw_simulate:
@@ -710,80 +645,90 @@ class TestThermalStress:
                 self.verify_communication()
                 self.get_firmware_versions()
                 self.enumerate_devices()
-                self.configure_solution()
             else:
                 self.logger.info("Hardware simulation enabled; skipping device configuration.")
 
             # Optional start prompt
-            if not self.args.no_prompt:
-                self.logger.info("Press enter to START %s: ", self.test_case_description)
-                input()
+            # if not self.args.no_prompt:
+            #     self.logger.info("Press enter to START %s: ", self.test_case_description)
+            #     input()
 
-            # Start sonication
-            if not self.hw_simulate:
-                self.logger.info("Starting Trigger...")
-                if not self.interface.start_sonication():
-                    self.logger.error("Failed to start trigger.")
-                    test_status = "error"
-                    return
-            else:
-                self.logger.info("Simulated Trigger start... (no hardware)")
+            for case in enumerate(TEST_CASES, start=1):
+                self.voltage = float(case["voltage"])
+                self.duration_msec = int(case["duty_cycle"] / 100 * self.interval_msec)
+                self.interval_msec = int(case["PRI_ms"])
+                
+                print(f"self.voltage: {self.voltage}")
+                print(f"self.duration_msec: {self.duration_msec}")
+                print(f"self.interval_msec: {self.interval_msec}")
+                
+                self.configure_solution()
 
-            self.logger.info("Trigger Running... (Press CTRL-C to stop early)")
-            test_status = "running"
-
-            # Start monitoring threads
-            temp_thread = threading.Thread(
-                target=self.monitor_temperature,
-                name="TemperatureMonitorThread",
-                daemon=True,
-            )
-            completion_thread = threading.Thread(
-                target=self.exit_on_time_complete,
-                args=(self.sequence_duration,),
-                name="SequenceCompletionThread",
-                daemon=True,
-            )
-
-            temp_thread.start()
-            completion_thread.start()
-
-            # Wait for threads or user interrupt
-            try:
-                while temp_thread.is_alive() and completion_thread.is_alive() and not self.shutdown_event.is_set():
-                    time.sleep(0.1)
-            except KeyboardInterrupt:
-                self.logger.warning("Test aborted by user KeyboardInterrupt.")
-                test_status = "aborted by user"
-                self.shutdown_event.set()
-
-            # Ensure shutdown event set
-            if not self.shutdown_event.is_set():
-                self.logger.warning("A thread exited without setting shutdown event; forcing shutdown.")
-                self.shutdown_event.set()
-
-            # Stop sonication
-            if not self.hw_simulate and self.interface is not None:
-                try:
-                    if self.interface.stop_sonication():
-                        self.logger.info("Trigger stopped successfully.")
-                    else:
-                        self.logger.error("Failed to stop trigger.")
-                except Exception as e:
-                    self.logger.error("Error stopping trigger: %s", e)
-
-            # Wait for threads to exit gracefully
-            temp_thread.join(timeout=2.0)
-            completion_thread.join(timeout=2.0)
-
-            # Determine final status
-            if test_status not in ("aborted by user", "error"):
-                if self.sequence_complete_event.is_set():
-                    test_status = "passed"
-                elif self.temperature_shutdown_event.is_set():
-                    test_status = "temperature shutdown"
+                # Start sonication
+                if not self.hw_simulate:
+                    self.logger.info("Starting Trigger...")
+                    if not self.interface.start_sonication():
+                        self.logger.error("Failed to start trigger.")
+                        test_status = "error"
+                        return
                 else:
-                    test_status = "error"
+                    self.logger.info("Simulated Trigger start... (no hardware)")
+
+                self.logger.info("Trigger Running... (Press CTRL-C to stop early)")
+                test_status = "running"
+
+                # Start monitoring threads
+                temp_thread = threading.Thread(
+                    target=self.monitor_temperature,
+                    name="TemperatureMonitorThread",
+                    daemon=True,
+                )
+                completion_thread = threading.Thread(
+                    target=self.exit_on_time_complete,
+                    args=(self.sequence_duration,),
+                    name="SequenceCompletionThread",
+                    daemon=True,
+                )
+
+                temp_thread.start()
+                completion_thread.start()
+
+                # Wait for threads or user interrupt
+                try:
+                    while temp_thread.is_alive() and completion_thread.is_alive() and not self.shutdown_event.is_set():
+                        time.sleep(0.1)
+                except KeyboardInterrupt:
+                    self.logger.warning("Test aborted by user KeyboardInterrupt.")
+                    test_status = "aborted by user"
+                    self.shutdown_event.set()
+
+                # Ensure shutdown event set
+                if not self.shutdown_event.is_set():
+                    self.logger.warning("A thread exited without setting shutdown event; forcing shutdown.")
+                    self.shutdown_event.set()
+
+                # Stop sonication
+                if not self.hw_simulate and self.interface is not None:
+                    try:
+                        if self.interface.stop_sonication():
+                            self.logger.info("Trigger stopped successfully.")
+                        else:
+                            self.logger.error("Failed to stop trigger.")
+                    except Exception as e:
+                        self.logger.error("Error stopping trigger: %s", e)
+
+                # Wait for threads to exit gracefully
+                temp_thread.join(timeout=2.0)
+                completion_thread.join(timeout=2.0)
+
+                # Determine final status
+                if test_status not in ("aborted by user", "error"):
+                    if self.sequence_complete_event.is_set():
+                        test_status = "passed"
+                    elif self.temperature_shutdown_event.is_set():
+                        test_status = "temperature shutdown"
+                    else:
+                        test_status = "error"
 
         finally:
             # Power down and cleanup
@@ -802,13 +747,6 @@ class TestThermalStress:
             else:
                 self.logger.info("TEST FAILED: %s failed due to unexpected error.", self.test_case_description)
 
-def frequency_khz(value: str) -> int:
-    ivalue = int(value)
-    if not 100 <= ivalue <= 500:
-        raise argparse.ArgumentTypeError(
-            "frequency (kHz) must be between 100 and 500 kHz"
-        )
-    return ivalue
 
 def parse_arguments() -> argparse.Namespace:
     """Parse command-line arguments."""
@@ -862,34 +800,27 @@ Examples:
     behavior_group.add_argument(
         "--num-modules",
         type=int,
-        default=None,
-        choices=NUM_MODULES,
+        default=NUM_MODULES_DEFAULT,
         metavar="N",
-        help=f"Number of modules connected.",
+        help=f"Number of modules in the system (default: {NUM_MODULES_DEFAULT}).",
     )
     behavior_group.add_argument(
         "--frequency",
-        type=frequency_khz,
+        type=int,
+        choices=FREQUENCIES_KHZ.values(),
         default=None,
         metavar="KHZ",
         help="TX frequency in kHz (overrides interactive selection).",
     )
-    behavior_group.add_argument(
-        "--test-case",
-        type=int,
-        choices=list(TEST_CASES.keys()),
-        default=None,
-        metavar="N",
-        help="Predefined test case number (overrides interactive selection).",
-    )
-    behavior_group.add_argument(
-        "--interval",
-        type=int,
-        choices=tuple(INTERVAL_MSEC.values()),
-        default=None,
-        metavar="N",
-        help="Predefined interval in ms (overrides interactive selection).",
-    )
+    # behavior_group.add_argument(
+    #     "--test-case",
+    #     type=int,
+    #     choices=list(TEST_CASES.keys()),
+    #     default=None,
+    #     metavar="N",
+    #     help="Predefined test case number (overrides interactive selection).",
+    # )
+
     # Safety thresholds
     safety_group = parser.add_argument_group("Safety Thresholds")
     safety_group.add_argument(
@@ -971,7 +902,7 @@ Examples:
 def main() -> None:
     """Main entry point for the script."""
     args = parse_arguments()
-    test = TestThermalStress(args)
+    test = TestSonicationDuration(args)
 
     try:
         test.run()
