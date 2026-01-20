@@ -45,33 +45,33 @@ TEST_ID = Path(__file__).name.replace(".py", "")
 
 # ------------------- Test Case Definitions ------------------- #
 TEST_CASES = [
-    {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 100, "default_wait_sec": 600},
-    {"voltage": 60, "duty_cycle": 10, "PRI_ms": 100, "default_wait_sec": 600},
-    {"voltage": 55, "duty_cycle": 15, "PRI_ms": 100, "default_wait_sec": 600},
-    {"voltage": 50, "duty_cycle": 20, "PRI_ms": 100, "default_wait_sec": 600},
-    {"voltage": 45, "duty_cycle": 25, "PRI_ms": 100, "default_wait_sec": 600},
-    {"voltage": 40, "duty_cycle": 30, "PRI_ms": 100, "default_wait_sec": 600},
-    {"voltage": 35, "duty_cycle": 35, "PRI_ms": 100, "default_wait_sec": 600},
-    {"voltage": 30, "duty_cycle": 40, "PRI_ms": 100, "default_wait_sec": 600},
-    {"voltage": 25, "duty_cycle": 45, "PRI_ms": 100, "default_wait_sec": 600},
-    {"voltage": 20, "duty_cycle": 50, "PRI_ms": 100, "default_wait_sec": 600},
-    {"voltage": 15, "duty_cycle": 50, "PRI_ms": 100, "default_wait_sec": 600},
-    {"voltage": 10, "duty_cycle": 50, "PRI_ms": 100, "default_wait_sec": 600},
-    {"voltage": 5,  "duty_cycle": 50, "PRI_ms": 100, "default_wait_sec": 600},
+    {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 100, "default_cooldown_sec": 5*10, "max_starting_temperature": 20},
+    {"voltage": 60, "duty_cycle": 10, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 35},
+    {"voltage": 55, "duty_cycle": 15, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 35},
+    {"voltage": 50, "duty_cycle": 20, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 30},
+    {"voltage": 45, "duty_cycle": 25, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 30},
+    {"voltage": 40, "duty_cycle": 30, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 35},
+    {"voltage": 35, "duty_cycle": 35, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 35},
+    {"voltage": 30, "duty_cycle": 40, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 35},
+    {"voltage": 25, "duty_cycle": 45, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 35},
+    {"voltage": 20, "duty_cycle": 50, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 50},
+    {"voltage": 15, "duty_cycle": 50, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 50},
+    {"voltage": 10, "duty_cycle": 50, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 50},
+    {"voltage": 5,  "duty_cycle": 50, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 50},
 
-    {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 200, "default_wait_sec": 900},
-    {"voltage": 60, "duty_cycle": 10, "PRI_ms": 200, "default_wait_sec": 900},
-    {"voltage": 55, "duty_cycle": 15, "PRI_ms": 200, "default_wait_sec": 900},
-    {"voltage": 50, "duty_cycle": 20, "PRI_ms": 200, "default_wait_sec": 900},
-    {"voltage": 45, "duty_cycle": 25, "PRI_ms": 200, "default_wait_sec": 900},
-    {"voltage": 40, "duty_cycle": 30, "PRI_ms": 200, "default_wait_sec": 900},
-    {"voltage": 35, "duty_cycle": 35, "PRI_ms": 200, "default_wait_sec": 900},
-    {"voltage": 30, "duty_cycle": 40, "PRI_ms": 200, "default_wait_sec": 900},
-    {"voltage": 25, "duty_cycle": 45, "PRI_ms": 200, "default_wait_sec": 900},
-    {"voltage": 20, "duty_cycle": 50, "PRI_ms": 200, "default_wait_sec": 900},
-    {"voltage": 15, "duty_cycle": 50, "PRI_ms": 200, "default_wait_sec": 900},
-    {"voltage": 10, "duty_cycle": 50, "PRI_ms": 200, "default_wait_sec": 900},
-    {"voltage": 5,  "duty_cycle": 50, "PRI_ms": 200, "default_wait_sec": 900},
+    {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 35},
+    {"voltage": 60, "duty_cycle": 10, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 35},
+    {"voltage": 55, "duty_cycle": 15, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 35},
+    {"voltage": 50, "duty_cycle": 20, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 30},
+    {"voltage": 45, "duty_cycle": 25, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 30},
+    {"voltage": 40, "duty_cycle": 30, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 35},
+    {"voltage": 35, "duty_cycle": 35, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 35},
+    {"voltage": 30, "duty_cycle": 40, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 35},
+    {"voltage": 25, "duty_cycle": 45, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 35},
+    {"voltage": 20, "duty_cycle": 50, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 50},
+    {"voltage": 15, "duty_cycle": 50, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 50},
+    {"voltage": 10, "duty_cycle": 50, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 50},
+    {"voltage": 5,  "duty_cycle": 50, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 50},
 ]
 
 DURATION_MIN = 5  # constant
@@ -294,6 +294,7 @@ class TestSonicationDuration:
             f"{self.frequency_khz}kHz, Case {self.test_case_num}: "
             f"{self.test_case['voltage']}V, "
             f"{self.test_case['duty_cycle_pct']}%, "
+            f"{self.interval_msec}ms PRI, " 
             f"{format_hhmmss(self.test_case['sequence_duration'])}"
         )
         self.test_case_id = f"{self.frequency_khz}kHz_{self.test_case['id']}"
@@ -588,6 +589,27 @@ class TestSonicationDuration:
         self.shutdown_event.set()
         self.temperature_shutdown_event.set()
 
+    def _monitor_cooldown(self, test_case_id, cooldown_duration_sec, starting_temperature) -> None:
+        """Monitor cooldown period before starting the test."""
+        temp = self.interface.txdevice.get_temperature()  # Initial read to populate temperature
+        while temp > starting_temperature:
+            self.logger.info(f"Current temperature of {temp} is greater than max starting "
+                             f"temperature of {starting_temperature} for test case {test_case_id}. "
+                             f"Will turn off transmitter for {cooldown_duration_sec/60} minutes to cool down and then check again.")
+            self.turn_off_console_and_tx()
+            self.cleanup_interface()
+            time.sleep(cooldown_duration_sec)
+            self.connect_device()
+            self.verify_communication()
+            temp = self.interface.txdevice.get_temperature()  # Update temperature after cooldown
+        
+        # if voltage value is 20 or less do a separate cycle
+        
+        if not self.hw_simulate:
+            with contextlib.suppress(Exception):
+                self.turn_off_console_and_tx()
+            self.cleanup_interface()
+
     def exit_on_time_complete(self, total_test_time: float) -> None:
         """Thread target: stop test when total test time is reached."""
         start = time.time()
@@ -667,98 +689,97 @@ class TestSonicationDuration:
             print(f"self.duration_msec: {self.duration_msec}")
             print(f"self.interval_msec: {self.interval_msec}")
             print(f"test_case_id: {test_id}")
+            print(f"starting test case {test_id} out of {len(TEST_CASES)}")
 
             try:
                 # Interactive selection
                 
                 # self._select_test_case()
                 # self._derive_test_case_parameters()
-
-                
-
                     # Connect and configure
-                    if not self.hw_simulate:
-                        self.connect_device()
-                        self.verify_communication()
-                        self.get_firmware_versions()
-                        self.enumerate_devices()
-                    else:
-                        self.logger.info("Hardware simulation enabled; skipping device configuration.")
+                if not self.hw_simulate:
+                    self.connect_device()
+                    self.verify_communication()
+                    self.get_firmware_versions()
+                    self.enumerate_devices()
+                    self._monitor_cooldown(test_id, case_parameters["default_cooldown_sec"], case_parameters["max_starting_temperature"])
+                else:
+                    self.logger.info("Hardware simulation enabled; skipping device configuration.")
 
-                    # Optional start prompt
-                    # if not self.args.no_prompt:
-                    #     self.logger.info("Press enter to START %s: ", self.test_case_description)
-                    #     input()
+                # Optional start prompt
+                # if not self.args.no_prompt:
+                #     self.logger.info("Press enter to START %s: ", self.test_case_description)
+                #     input()
 
+            
                 
-                    
-                    self.configure_solution()
+                self.configure_solution()
 
-                    # Start sonication
-                    if not self.hw_simulate:
-                        self.logger.info("Starting Trigger...")
-                        if not self.interface.start_sonication():
-                            self.logger.error("Failed to start trigger.")
-                            test_status = "error"
-                            return
-                    else:
-                        self.logger.info("Simulated Trigger start... (no hardware)")
+                # Start sonication
+                if not self.hw_simulate:
+                    self.logger.info("Starting Trigger...")
+                    if not self.interface.start_sonication():
+                        self.logger.error("Failed to start trigger.")
+                        test_status = "error"
+                        return
+                else:
+                    self.logger.info("Simulated Trigger start... (no hardware)")
 
-                    self.logger.info("Trigger Running... (Press CTRL-C to stop early)")
-                    test_status = "running"
+                self.logger.info("Trigger Running... (Press CTRL-C to stop early)")
+                test_status = "running"
 
-                    # Start monitoring threads
-                    temp_thread = threading.Thread(
-                        target=self.monitor_temperature,
-                        name="TemperatureMonitorThread",
-                        daemon=True,
-                    )
-                    completion_thread = threading.Thread(
-                        target=self.exit_on_time_complete,
-                        args=(self.sequence_duration,),
-                        name="SequenceCompletionThread",
-                        daemon=True,
-                    )
+                # Start monitoring threads
+                temp_thread = threading.Thread(
+                    target=self.monitor_temperature,
+                    name="TemperatureMonitorThread",
+                    daemon=True,
+                )
+                completion_thread = threading.Thread(
+                    target=self.exit_on_time_complete,
+                    args=(self.sequence_duration,),
+                    name="SequenceCompletionThread",
+                    daemon=True,
+                )
 
-                    temp_thread.start()
-                    completion_thread.start()
+                temp_thread.start()
+                completion_thread.start()
 
-                    # Wait for threads or user interrupt
+                # Wait for threads or user interrupt
+                try:
+                    while temp_thread.is_alive() and completion_thread.is_alive() and not self.shutdown_event.is_set():
+                        time.sleep(0.1)
+                except KeyboardInterrupt:
+                    self.logger.warning("Test aborted by user KeyboardInterrupt.")
+                    test_status = "aborted by user"
+                    self.shutdown_event.set()
+
+                # Ensure shutdown event set
+                if not self.shutdown_event.is_set():
+                    self.logger.warning("A thread exited without setting shutdown event; forcing shutdown.")
+                    self.shutdown_event.set()
+
+                # Stop sonication
+                if not self.hw_simulate and self.interface is not None:
                     try:
-                        while temp_thread.is_alive() and completion_thread.is_alive() and not self.shutdown_event.is_set():
-                            time.sleep(0.1)
-                    except KeyboardInterrupt:
-                        self.logger.warning("Test aborted by user KeyboardInterrupt.")
-                        test_status = "aborted by user"
-                        self.shutdown_event.set()
-
-                    # Ensure shutdown event set
-                    if not self.shutdown_event.is_set():
-                        self.logger.warning("A thread exited without setting shutdown event; forcing shutdown.")
-                        self.shutdown_event.set()
-
-                    # Stop sonication
-                    if not self.hw_simulate and self.interface is not None:
-                        try:
-                            if self.interface.stop_sonication():
-                                self.logger.info("Trigger stopped successfully.")
-                            else:
-                                self.logger.error("Failed to stop trigger.")
-                        except Exception as e:
-                            self.logger.error("Error stopping trigger: %s", e)
-
-                    # Wait for threads to exit gracefully
-                    temp_thread.join(timeout=2.0)
-                    completion_thread.join(timeout=2.0)
-
-                    # Determine final status
-                    if test_status not in ("aborted by user", "error"):
-                        if self.sequence_complete_event.is_set():
-                            test_status = "passed"
-                        elif self.temperature_shutdown_event.is_set():
-                            test_status = "temperature shutdown"
+                        if self.interface.stop_sonication():
+                            self.logger.info("Trigger stopped successfully.")
                         else:
-                            test_status = "error"
+                            self.logger.error("Failed to stop trigger.")
+                    except Exception as e:
+                        self.logger.error("Error stopping trigger: %s", e)
+
+                # Wait for threads to exit gracefully
+                temp_thread.join(timeout=2.0)
+                completion_thread.join(timeout=2.0)
+
+                # Determine final status
+                if test_status not in ("aborted by user", "error"):
+                    if self.sequence_complete_event.is_set():
+                        test_status = "passed"
+                    elif self.temperature_shutdown_event.is_set():
+                        test_status = "temperature shutdown"
+                    else:
+                        test_status = "error"
 
             finally:
                 # Power down and cleanup
