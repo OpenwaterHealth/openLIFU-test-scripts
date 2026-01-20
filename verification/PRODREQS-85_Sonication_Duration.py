@@ -45,33 +45,33 @@ TEST_ID = Path(__file__).name.replace(".py", "")
 
 # ------------------- Test Case Definitions ------------------- #
 TEST_CASES = [
-    {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 100},
-    {"voltage": 60, "duty_cycle": 10, "PRI_ms": 100},
-    {"voltage": 55, "duty_cycle": 15, "PRI_ms": 100},
-    {"voltage": 50, "duty_cycle": 20, "PRI_ms": 100},
-    {"voltage": 45, "duty_cycle": 25, "PRI_ms": 100},
-    {"voltage": 40, "duty_cycle": 30, "PRI_ms": 100},
-    {"voltage": 35, "duty_cycle": 35, "PRI_ms": 100},
-    {"voltage": 30, "duty_cycle": 40, "PRI_ms": 100},
-    {"voltage": 25, "duty_cycle": 45, "PRI_ms": 100},
-    {"voltage": 20, "duty_cycle": 50, "PRI_ms": 100},
-    {"voltage": 15, "duty_cycle": 50, "PRI_ms": 100},
-    {"voltage": 10, "duty_cycle": 50, "PRI_ms": 100},
-    {"voltage": 5,  "duty_cycle": 50, "PRI_ms": 100},
+    {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 100, "default_wait_sec": 600},
+    {"voltage": 60, "duty_cycle": 10, "PRI_ms": 100, "default_wait_sec": 600},
+    {"voltage": 55, "duty_cycle": 15, "PRI_ms": 100, "default_wait_sec": 600},
+    {"voltage": 50, "duty_cycle": 20, "PRI_ms": 100, "default_wait_sec": 600},
+    {"voltage": 45, "duty_cycle": 25, "PRI_ms": 100, "default_wait_sec": 600},
+    {"voltage": 40, "duty_cycle": 30, "PRI_ms": 100, "default_wait_sec": 600},
+    {"voltage": 35, "duty_cycle": 35, "PRI_ms": 100, "default_wait_sec": 600},
+    {"voltage": 30, "duty_cycle": 40, "PRI_ms": 100, "default_wait_sec": 600},
+    {"voltage": 25, "duty_cycle": 45, "PRI_ms": 100, "default_wait_sec": 600},
+    {"voltage": 20, "duty_cycle": 50, "PRI_ms": 100, "default_wait_sec": 600},
+    {"voltage": 15, "duty_cycle": 50, "PRI_ms": 100, "default_wait_sec": 600},
+    {"voltage": 10, "duty_cycle": 50, "PRI_ms": 100, "default_wait_sec": 600},
+    {"voltage": 5,  "duty_cycle": 50, "PRI_ms": 100, "default_wait_sec": 600},
 
-    {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 200},
-    {"voltage": 60, "duty_cycle": 10, "PRI_ms": 200},
-    {"voltage": 55, "duty_cycle": 15, "PRI_ms": 200},
-    {"voltage": 50, "duty_cycle": 20, "PRI_ms": 200},
-    {"voltage": 45, "duty_cycle": 25, "PRI_ms": 200},
-    {"voltage": 40, "duty_cycle": 30, "PRI_ms": 200},
-    {"voltage": 35, "duty_cycle": 35, "PRI_ms": 200},
-    {"voltage": 30, "duty_cycle": 40, "PRI_ms": 200},
-    {"voltage": 25, "duty_cycle": 45, "PRI_ms": 200},
-    {"voltage": 20, "duty_cycle": 50, "PRI_ms": 200},
-    {"voltage": 15, "duty_cycle": 50, "PRI_ms": 200},
-    {"voltage": 10, "duty_cycle": 50, "PRI_ms": 200},
-    {"voltage": 5,  "duty_cycle": 50, "PRI_ms": 200},
+    {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 200, "default_wait_sec": 900},
+    {"voltage": 60, "duty_cycle": 10, "PRI_ms": 200, "default_wait_sec": 900},
+    {"voltage": 55, "duty_cycle": 15, "PRI_ms": 200, "default_wait_sec": 900},
+    {"voltage": 50, "duty_cycle": 20, "PRI_ms": 200, "default_wait_sec": 900},
+    {"voltage": 45, "duty_cycle": 25, "PRI_ms": 200, "default_wait_sec": 900},
+    {"voltage": 40, "duty_cycle": 30, "PRI_ms": 200, "default_wait_sec": 900},
+    {"voltage": 35, "duty_cycle": 35, "PRI_ms": 200, "default_wait_sec": 900},
+    {"voltage": 30, "duty_cycle": 40, "PRI_ms": 200, "default_wait_sec": 900},
+    {"voltage": 25, "duty_cycle": 45, "PRI_ms": 200, "default_wait_sec": 900},
+    {"voltage": 20, "duty_cycle": 50, "PRI_ms": 200, "default_wait_sec": 900},
+    {"voltage": 15, "duty_cycle": 50, "PRI_ms": 200, "default_wait_sec": 900},
+    {"voltage": 10, "duty_cycle": 50, "PRI_ms": 200, "default_wait_sec": 900},
+    {"voltage": 5,  "duty_cycle": 50, "PRI_ms": 200, "default_wait_sec": 900},
 ]
 
 DURATION_MIN = 5  # constant
@@ -658,14 +658,15 @@ class TestSonicationDuration:
             self.logger.error("Error during initial selection: %s", e)
             sys.exit(1)
 
-        for case in TEST_CASES:
-            self.voltage = float(case["voltage"])
-            self.interval_msec = int(case["PRI_ms"])
-            self.duration_msec = int(case["duty_cycle"] / 100 * self.interval_msec)
+        for test_id, case_parameters in enumerate(TEST_CASES, start=1):
+            self.voltage = float(case_parameters["voltage"])
+            self.interval_msec = int(case_parameters["PRI_ms"])
+            self.duration_msec = int(case_parameters["duty_cycle"] / 100 * self.interval_msec)
             
             print(f"self.voltage: {self.voltage}")
             print(f"self.duration_msec: {self.duration_msec}")
             print(f"self.interval_msec: {self.interval_msec}")
+            print(f"test_case_id: {test_id}")
 
             try:
                 # Interactive selection
