@@ -47,31 +47,31 @@ TEST_ID = Path(__file__).name.replace(".py", "")
 TEST_CASES = [
     {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 100, "max_starting_temperature": 20},
     {"voltage": 60, "duty_cycle": 10, "PRI_ms": 100, "max_starting_temperature": 35},
-    {"voltage": 55, "duty_cycle": 15, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 35},
-    {"voltage": 50, "duty_cycle": 20, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 30},
-    {"voltage": 45, "duty_cycle": 25, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 30},
-    {"voltage": 40, "duty_cycle": 30, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 35},
-    {"voltage": 35, "duty_cycle": 35, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 35},
-    {"voltage": 30, "duty_cycle": 40, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 35},
-    {"voltage": 25, "duty_cycle": 45, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 35},
-    {"voltage": 20, "duty_cycle": 50, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 60},
-    {"voltage": 15, "duty_cycle": 50, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 60},
-    {"voltage": 10, "duty_cycle": 50, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 60},
-    {"voltage": 5,  "duty_cycle": 50, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 60},
+    {"voltage": 55, "duty_cycle": 15, "PRI_ms": 100, "max_starting_temperature": 35},
+    {"voltage": 50, "duty_cycle": 20, "PRI_ms": 100, "max_starting_temperature": 30},
+    {"voltage": 45, "duty_cycle": 25, "PRI_ms": 100, "max_starting_temperature": 30},
+    {"voltage": 40, "duty_cycle": 30, "PRI_ms": 100, "max_starting_temperature": 35},
+    {"voltage": 35, "duty_cycle": 35, "PRI_ms": 100, "max_starting_temperature": 35},
+    {"voltage": 30, "duty_cycle": 40, "PRI_ms": 100, "max_starting_temperature": 35},
+    {"voltage": 25, "duty_cycle": 45, "PRI_ms": 100, "max_starting_temperature": 35},
+    {"voltage": 20, "duty_cycle": 50, "PRI_ms": 100, "max_starting_temperature": 60},
+    {"voltage": 15, "duty_cycle": 50, "PRI_ms": 100, "max_starting_temperature": 60},
+    {"voltage": 10, "duty_cycle": 50, "PRI_ms": 100, "max_starting_temperature": 60},
+    {"voltage": 5,  "duty_cycle": 50, "PRI_ms": 100, "max_starting_temperature": 60},
 
-    {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 35},
-    {"voltage": 60, "duty_cycle": 10, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 35},
-    {"voltage": 55, "duty_cycle": 15, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 35},
-    {"voltage": 50, "duty_cycle": 20, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 30},
-    {"voltage": 45, "duty_cycle": 25, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 30},
-    {"voltage": 40, "duty_cycle": 30, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 35},
-    {"voltage": 35, "duty_cycle": 35, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 35},
-    {"voltage": 30, "duty_cycle": 40, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 35},
-    {"voltage": 25, "duty_cycle": 45, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 35},
-    {"voltage": 20, "duty_cycle": 50, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 60},
-    {"voltage": 15, "duty_cycle": 50, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 60},
-    {"voltage": 10, "duty_cycle": 50, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 60},
-    {"voltage": 5,  "duty_cycle": 50, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 60},
+    {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 200, "max_starting_temperature": 35},
+    {"voltage": 60, "duty_cycle": 10, "PRI_ms": 200, "max_starting_temperature": 35},
+    {"voltage": 55, "duty_cycle": 15, "PRI_ms": 200, "max_starting_temperature": 35},
+    {"voltage": 50, "duty_cycle": 20, "PRI_ms": 200, "max_starting_temperature": 30},
+    {"voltage": 45, "duty_cycle": 25, "PRI_ms": 200, "max_starting_temperature": 30},
+    {"voltage": 40, "duty_cycle": 30, "PRI_ms": 200, "max_starting_temperature": 35},
+    {"voltage": 35, "duty_cycle": 35, "PRI_ms": 200, "max_starting_temperature": 35},
+    {"voltage": 30, "duty_cycle": 40, "PRI_ms": 200, "max_starting_temperature": 35},
+    {"voltage": 25, "duty_cycle": 45, "PRI_ms": 200, "max_starting_temperature": 35},
+    {"voltage": 20, "duty_cycle": 50, "PRI_ms": 200, "max_starting_temperature": 60},
+    {"voltage": 15, "duty_cycle": 50, "PRI_ms": 200, "max_starting_temperature": 60},
+    {"voltage": 10, "duty_cycle": 50, "PRI_ms": 200, "max_starting_temperature": 60},
+    {"voltage": 5,  "duty_cycle": 50, "PRI_ms": 200, "max_starting_temperature": 60},
 ]
 
 TEST_CASE_DURATION_SECONDS = 10 * 60
@@ -146,9 +146,9 @@ class TestSonicationDuration:
         # Test configuration – set later via interactive selection
         self.frequency_khz: float | None = None
         self.test_case_num: int | None = None
-        self.test_case: dict | None = None
-        self.test_case_description: str | None = None
-        self.test_case_long_description: str | None = None
+        # self.test_case: dict | None = None
+        # self.test_case_description: str | None = None
+        # self.test_case_long_description: str | None = None
         self.test_case_id: str | None = None
         self.voltage: float | None = None
         self.interval_msec: float | None = None
@@ -210,13 +210,13 @@ class TestSonicationDuration:
             return
 
         self.log_dir.mkdir(parents=True, exist_ok=True)
+        test_case_folder_name = Path(self.openlifu_dir / "logs" / f"{self.run_timestamp}_{TEST_ID}_Test_{self.frequency_khz}kHz_{self.num_modules}_Modules")
+        test_case_folder_name.mkdir(parents=True, exist_ok=True)
 
-        if self.test_case_id is None:
-            filename = f"{TEST_ID}_{self.run_timestamp}.log"
-        else:
-            filename = f"{TEST_ID}_{self.test_case_id}_{self.run_timestamp}.log"
+        self.test_case_id = f"Test_Case_{self.test_case_num}_{self.frequency_khz}kHz_{self.voltage}V_{self.duration_msec}ms_{self.interval_msec}msPRI"
+        filename = f"{TEST_ID}_{self.test_case_id}_{self.run_timestamp}.log"
 
-        log_path = self.log_dir / filename
+        log_path = self.log_dir / test_case_folder_name / filename
 
         formatter = SafeFormatter(
             "%(asctime)s - %(levelname)s - %(message)s",
@@ -290,33 +290,33 @@ class TestSonicationDuration:
                     break
                 self.logger.info("Invalid selection. Please try again.")
 
-    def _derive_test_case_parameters(self) -> None:
-        # Derive test-case-specific parameters
-        self.test_case_description = self.test_case["description"]
-        self.test_case_long_description = (
-            f"{self.frequency_khz}kHz, Case {self.test_case_num}: "
-            f"{self.test_case['voltage']}V, "
-            f"{self.test_case['duty_cycle_pct']}%, "
-            f"{self.interval_msec}ms PRI, " 
-            f"{format_hhmmss(self.test_case['sequence_duration'])}"
-        )
-        self.test_case_id = f"{self.frequency_khz}kHz_{self.test_case['id']}"
-        self.voltage = float(self.test_case["voltage"])
-        self.duration_msec = int(self.test_case["duty_cycle_pct"] / 100 * self.interval_msec)
-        self.sequence_duration = float(self.test_case["sequence_duration"])
+    # def _derive_test_case_parameters(self) -> None:
+    #     # Derive test-case-specific parameters
+    #     self.test_case_description = self.test_case["description"]
+    #     self.test_case_long_description = (
+    #         f"{self.frequency_khz}kHz, Case {self.test_case_num}: "
+    #         f"{self.test_case['voltage']}V, "
+    #         f"{self.test_case['duty_cycle_pct']}%, "
+    #         f"{self.interval_msec}ms PRI, " 
+    #         f"{format_hhmmss(self.test_case['sequence_duration'])}"
+    #     )
+    #     self.test_case_id = f"{self.frequency_khz}kHz_{self.test_case['id']}"
+    #     self.voltage = float(self.test_case["voltage"])
+    #     self.duration_msec = int(self.test_case["duty_cycle_pct"] / 100 * self.interval_msec)
+    #     self.sequence_duration = float(self.test_case["sequence_duration"])
 
-        self._attach_file_handler()
+    #     self._attach_file_handler()
 
-        if self.hw_simulate:
-            self.logger.info("Beginning Test %s (TEST MODE)", self.test_case_description)
-            self.logger.info("TEST MODE: This is a simulated test run.")
-            self.logger.info("No actual hardware interactions will occur.")
-        else:
-            self.logger.info("Selected Frequency: %d kHz", self.frequency_khz)
-            self.logger.info("Selected Test Case: %d", self.test_case_num)
-            self.logger.info("Beginning Test %s", self.test_case_description)
+    #     if self.hw_simulate:
+    #         self.logger.info("Beginning Test %s (TEST MODE)", self.test_case_description)
+    #         self.logger.info("TEST MODE: This is a simulated test run.")
+    #         self.logger.info("No actual hardware interactions will occur.")
+    #     else:
+    #         self.logger.info("Selected Frequency: %d kHz", self.frequency_khz)
+    #         self.logger.info("Selected Test Case: %d", self.test_case_num)
+    #         self.logger.info("Beginning Test %s", self.test_case_description)
 
-        self.logger.info("%s", self.test_case_long_description)   
+    #     self.logger.info("%s", self.test_case_long_description)   
 
     def connect_device(self) -> None:
         """Connect to the LIFU device and verify connection."""
@@ -484,7 +484,7 @@ class TestSonicationDuration:
             trigger_mode=trigger_mode,
         )
 
-        self.logger.info("Solution configured for Test Case %s.", self.test_case_id)
+        self.logger.info("Solution configured for Test Case %s.", self.test_case_num)
 
     def monitor_console_voltage(self) -> None:
         """Thread target: monitor console voltage."""
@@ -536,8 +536,6 @@ class TestSonicationDuration:
         self.logger.warning("Console voltage shutdown triggered.")
         self.shutdown_event.set()
         self.temperature_shutdown_event.set()
-
-
 
     def monitor_temperature(self) -> None:
         """Thread target: monitor temperatures and trigger shutdown on safety violations."""
@@ -645,15 +643,15 @@ class TestSonicationDuration:
         self.shutdown_event.set()
         self.temperature_shutdown_event.set()
 
-    def _verify_start_conditions(self, test_case_id, starting_temperature) -> None:
+    def _verify_start_conditions(self, test_case, starting_temperature) -> None:
         """Monitor cooldown period before starting the test."""
-        print(f"test_case_id: {test_case_id} starting_temperature: {starting_temperature}")
+        print(f"test_case_id: {test_case} starting_temperature: {starting_temperature}")
         temp = self.interface.txdevice.get_temperature()  # Initial read to populate temperature
         print(f"Initial TX temperature: {temp}C")
         while temp > starting_temperature:
             print("while loop entered")
             self.logger.info(f"Current temperature of {temp}C is greater than max starting "
-                             f"temperature of {starting_temperature}C for test case {test_case_id}. "
+                             f"temperature of {starting_temperature}C for test case {test_case}. "
                              f"Transmitter will turn off for {TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_SECONDS // 60} minutes to cool down and then check again.")
             self.turn_off_console_and_tx()
             self.cleanup_interface()
@@ -751,49 +749,28 @@ class TestSonicationDuration:
             self.logger.error("Error during initial selection: %s", e)
             sys.exit(1)
 
-        for test_id, case_parameters in enumerate(TEST_CASES[self.starting_test_case-1:], start=self.starting_test_case):
-            print("test_id:", test_id)
-            print(f"case_parameters: {case_parameters}")
+        for test_case, test_case_parameters in enumerate(TEST_CASES[self.starting_test_case-1:], start=self.starting_test_case):
+            self.test_case_num = test_case
+            self.voltage = float(test_case_parameters["voltage"])
+            self.interval_msec = int(test_case_parameters["PRI_ms"])
+            self.duration_msec = int(test_case_parameters["duty_cycle"] / 100 * self.interval_msec)
             
-            self.voltage = float(case_parameters["voltage"])
-            self.interval_msec = int(case_parameters["PRI_ms"])
-            self.duration_msec = int(case_parameters["duty_cycle"] / 100 * self.interval_msec)
-            
-            print(f"self.voltage: {self.voltage}")
-            print(f"self.duration_msec: {self.duration_msec}")
-            print(f"self.interval_msec: {self.interval_msec}")
-            print(f"starting test case {self.starting_test_case} out of {len(TEST_CASES)}")
+            self.logger.info(f"Starting test case {self.test_case_num} out of {len(TEST_CASES)}")
 
             try:
-                # Interactive selection
-                
-
-                # self._derive_test_case_parameters()
-                    # Connect and configure
                 if not self.hw_simulate:
+                    self._attach_file_handler()
                     self.connect_device()
                     self.verify_communication()
                     self.get_firmware_versions()
                     self.enumerate_devices()
-                    self._verify_start_conditions(test_id, case_parameters["max_starting_temperature"])
+                    self._verify_start_conditions(test_case, test_case_parameters["max_starting_temperature"])
                 else:
                     self.logger.info("Hardware simulation enabled; skipping device configuration.")
 
-                # Optional start prompt
-                # if not self.args.no_prompt:
-                #     self.logger.info("Press enter to START %s: ", self.test_case_description)
-                #     input()
-
-                        # if voltage value is 20 or less do a separate cycle
                 if self.voltage is not None and self.voltage <= LOW_VOLTAGE_VALUE:
-                    # start sonication
+
                     self.sequence_duration = LOW_VOLTAGE_VALUE_TEST_DURATION_SECONDS
-
-                    # exit after x minutes where x is what, 1 min?
-                    # constantly monitor adc value
-                    # at least do a 5 min wait after previous cooldown
-
-            
                 
                 self.configure_solution()
 
@@ -892,13 +869,13 @@ class TestSonicationDuration:
 
                 # Final status log
                 if test_status == "passed":
-                    self.logger.info("TEST PASSED: %s completed successfully.", self.test_case_description)
+                    self.logger.info(F"TEST CASE {self.test_case_num} PASSED.")
                 elif test_status == "temperature shutdown":
-                    self.logger.info("TEST FAILED: %s failed due to temperature shutdown.", self.test_case_description)
+                    self.logger.info(f"TEST CASE {self.test_case_num} FAILED.")
                 elif test_status == "aborted by user":
-                    self.logger.info("TEST ABORTED: %s aborted by user.", self.test_case_description)
+                    self.logger.info(f"TEST CASE {self.test_case_num} ABORTED by user.")
                 else:
-                    self.logger.info("TEST FAILED: %s failed due to unexpected error.", self.test_case_description)
+                    self.logger.info(f"TEST CASE {self.test_case_num} FAILED due to unexpected error.")
 
 def frequency_khz(value: str) -> int:
     ivalue = int(value)
