@@ -45,7 +45,7 @@ TEST_ID = Path(__file__).name.replace(".py", "")
 
 # ------------------- Test Case Definitions ------------------- #
 TEST_CASES = [
-    {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 100, "default_cooldown_sec": 5*10, "max_starting_temperature": 20},
+    {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 100, "max_starting_temperature": 20},
     {"voltage": 60, "duty_cycle": 10, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 35},
     {"voltage": 55, "duty_cycle": 15, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 35},
     {"voltage": 50, "duty_cycle": 20, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 30},
@@ -54,10 +54,10 @@ TEST_CASES = [
     {"voltage": 35, "duty_cycle": 35, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 35},
     {"voltage": 30, "duty_cycle": 40, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 35},
     {"voltage": 25, "duty_cycle": 45, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 35},
-    {"voltage": 20, "duty_cycle": 50, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 50},
-    {"voltage": 15, "duty_cycle": 50, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 50},
-    {"voltage": 10, "duty_cycle": 50, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 50},
-    {"voltage": 5,  "duty_cycle": 50, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 50},
+    {"voltage": 20, "duty_cycle": 50, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 60},
+    {"voltage": 15, "duty_cycle": 50, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 60},
+    {"voltage": 10, "duty_cycle": 50, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 60},
+    {"voltage": 5,  "duty_cycle": 50, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 60},
 
     {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 35},
     {"voltage": 60, "duty_cycle": 10, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 35},
@@ -68,16 +68,16 @@ TEST_CASES = [
     {"voltage": 35, "duty_cycle": 35, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 35},
     {"voltage": 30, "duty_cycle": 40, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 35},
     {"voltage": 25, "duty_cycle": 45, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 35},
-    {"voltage": 20, "duty_cycle": 50, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 50},
-    {"voltage": 15, "duty_cycle": 50, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 50},
-    {"voltage": 10, "duty_cycle": 50, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 50},
-    {"voltage": 5,  "duty_cycle": 50, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 50},
+    {"voltage": 20, "duty_cycle": 50, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 60},
+    {"voltage": 15, "duty_cycle": 50, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 60},
+    {"voltage": 10, "duty_cycle": 50, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 60},
+    {"voltage": 5,  "duty_cycle": 50, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 60},
 ]
 
-DURATION_MIN = 5  # constant
-
-# Frequency choices (kHz)
-# FREQUENCIES_KHZ = {1: 150, 2: 400}
+TEST_CASE_DURATION_MINUTES = 10
+TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_MINUTES = 5
+LOW_VOLTAGE_VALUE = 20
+LOW_VOLTAGE_VALUE_TEST_DURATION_SECONDS = 60
 
 # Pulse/sequence timing
 INTERVAL_MSEC = {1: 100, 2: 200}  # Default to 100 ms interval
@@ -155,7 +155,7 @@ class TestSonicationDuration:
         self.duration_msec: int | None = None
         self.num_modules: int | None = None
 
-        self.sequence_duration: float = DURATION_MIN  # seconds
+        self.sequence_duration: float = TEST_CASE_DURATION_MINUTES * 60 # seconds
 
         # Flags from args
         self.use_external_power = self.args.external_power
@@ -482,6 +482,58 @@ class TestSonicationDuration:
 
         self.logger.info("Solution configured for Test Case %s.", self.test_case_id)
 
+    def monitor_console_voltage(self) -> None:
+        """Thread target: monitor console voltage."""
+        if self.hw_simulate:
+            self.logger.info("Console voltage monitoring skipped in hardware simulation mode.")
+            while not self.shutdown_event.is_set():
+                time.sleep(0.5)
+            return
+        
+        if self.interface is None:
+            self.logger.error("Interface is not initialized in monitor_console_voltage.")
+            return
+
+        # serial_failures = 0
+        start_time = time.time()
+        last_log_time = 0.0
+
+        while True:
+            if self.shutdown_event.is_set():
+                return
+
+            time_elapsed = time.time() - start_time
+
+            # Read temperatures
+            try:
+                if not self.use_external_power:
+                    with self.mutex:
+                        console_voltage = self.interface.hvcontroller.get_voltage()
+
+            except SerialException as e:
+                self.logger.error("SerialException encountered while reading console voltage: %s", e)
+                break
+            except Exception as e:
+                self.logger.error("Unexpected error while reading console voltage: %s", e)
+                break
+
+            # Periodic logging
+            time_since_last_log = time_elapsed - last_log_time
+            if time_since_last_log >= self.temperature_log_interval:
+                last_log_time = time_elapsed
+                if not self.use_external_power and console_voltage is not None:
+                    self.logger.info(
+                        "  Console Temp: %.2f°C, TX Temp: %.2f°C, Ambient Temp: %.2f°C",
+                        console_voltage,
+                    )
+
+            time.sleep(self.temperature_check_interval)
+
+        self.logger.warning("Console voltage shutdown triggered.")
+        self.shutdown_event.set()
+        self.temperature_shutdown_event.set()
+
+
 
     def monitor_temperature(self) -> None:
         """Thread target: monitor temperatures and trigger shutdown on safety violations."""
@@ -589,26 +641,37 @@ class TestSonicationDuration:
         self.shutdown_event.set()
         self.temperature_shutdown_event.set()
 
-    def _monitor_cooldown(self, test_case_id, cooldown_duration_sec, starting_temperature) -> None:
+    def _verify_start_conditions(self, test_case_id, starting_temperature) -> None:
         """Monitor cooldown period before starting the test."""
         temp = self.interface.txdevice.get_temperature()  # Initial read to populate temperature
         while temp > starting_temperature:
             self.logger.info(f"Current temperature of {temp} is greater than max starting "
                              f"temperature of {starting_temperature} for test case {test_case_id}. "
-                             f"Will turn off transmitter for {cooldown_duration_sec/60} minutes to cool down and then check again.")
+                             f"Will turn off transmitter for {TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_MINUTES} minutes to cool down and then check again.")
             self.turn_off_console_and_tx()
             self.cleanup_interface()
-            time.sleep(cooldown_duration_sec)
+            time.sleep(TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_MINUTES * 60)  # Wait before rechecking
             self.connect_device()
             self.verify_communication()
             temp = self.interface.txdevice.get_temperature()  # Update temperature after cooldown
-        
-        # if voltage value is 20 or less do a separate cycle
         
         if not self.hw_simulate:
             with contextlib.suppress(Exception):
                 self.turn_off_console_and_tx()
             self.cleanup_interface()
+
+    # def _override_duration_if_low_voltage(self) -> None:
+    #             # if voltage value is 20 or less do a separate cycle
+    #     if self.voltage is not None and self.voltage <= 20:
+    #         # start sonication
+    #         self.sequence_duration = 60  # 1 minute duration for low voltage test
+            
+            
+            
+
+            # exit after x minutes where x is what, 1 min?
+            # constantly monitor adc value
+            # at least do a 5 min wait after previous cooldown
 
     def exit_on_time_complete(self, total_test_time: float) -> None:
         """Thread target: stop test when total test time is reached."""
@@ -702,7 +765,7 @@ class TestSonicationDuration:
                     self.verify_communication()
                     self.get_firmware_versions()
                     self.enumerate_devices()
-                    self._monitor_cooldown(test_id, case_parameters["default_cooldown_sec"], case_parameters["max_starting_temperature"])
+                    self._verify_start_conditions(test_id, case_parameters["max_starting_temperature"])
                 else:
                     self.logger.info("Hardware simulation enabled; skipping device configuration.")
 
@@ -710,6 +773,15 @@ class TestSonicationDuration:
                 # if not self.args.no_prompt:
                 #     self.logger.info("Press enter to START %s: ", self.test_case_description)
                 #     input()
+
+                        # if voltage value is 20 or less do a separate cycle
+                if self.voltage is not None and self.voltage <= LOW_VOLTAGE_VALUE:
+                    # start sonication
+                    self.sequence_duration = LOW_VOLTAGE_VALUE_TEST_DURATION_SECONDS
+
+                    # exit after x minutes where x is what, 1 min?
+                    # constantly monitor adc value
+                    # at least do a 5 min wait after previous cooldown
 
             
                 
@@ -741,13 +813,30 @@ class TestSonicationDuration:
                     daemon=True,
                 )
 
+                if self.voltage <= LOW_VOLTAGE_VALUE:
+                    voltage_thread = threading.Thread(
+                        target=self.monitor_console_voltage,
+                        name="ConsoleVoltageMonitorThread",
+                        daemon=True,
+                    )
+                    voltage_thread.start()
+
                 temp_thread.start()
                 completion_thread.start()
 
                 # Wait for threads or user interrupt
                 try:
-                    while temp_thread.is_alive() and completion_thread.is_alive() and not self.shutdown_event.is_set():
-                        time.sleep(0.1)
+                    if self.voltage <= LOW_VOLTAGE_VALUE:
+                        while temp_thread.is_alive() and\
+                          completion_thread.is_alive() and\
+                          voltage_thread.is_alive() and\
+                            not self.shutdown_event.is_set():
+                            time.sleep(0.1)
+                    else:
+                        while temp_thread.is_alive() and\
+                            completion_thread.is_alive() and\
+                                not self.shutdown_event.is_set():
+                            time.sleep(0.1)
                 except KeyboardInterrupt:
                     self.logger.warning("Test aborted by user KeyboardInterrupt.")
                     test_status = "aborted by user"
@@ -771,6 +860,9 @@ class TestSonicationDuration:
                 # Wait for threads to exit gracefully
                 temp_thread.join(timeout=2.0)
                 completion_thread.join(timeout=2.0)
+                
+                if self.voltage <= LOW_VOLTAGE_VALUE:
+                    voltage_thread.join(timeout=2.0)
 
                 # Determine final status
                 if test_status not in ("aborted by user", "error"):
