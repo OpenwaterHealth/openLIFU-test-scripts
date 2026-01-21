@@ -46,7 +46,7 @@ TEST_ID = Path(__file__).name.replace(".py", "")
 # ------------------- Test Case Definitions ------------------- #
 TEST_CASES = [
     {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 100, "max_starting_temperature": 20},
-    {"voltage": 60, "duty_cycle": 10, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 35},
+    {"voltage": 60, "duty_cycle": 10, "PRI_ms": 100, "max_starting_temperature": 35},
     {"voltage": 55, "duty_cycle": 15, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 35},
     {"voltage": 50, "duty_cycle": 20, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 30},
     {"voltage": 45, "duty_cycle": 25, "PRI_ms": 100, "default_cooldown_sec": 60*10, "max_starting_temperature": 30},
@@ -74,8 +74,8 @@ TEST_CASES = [
     {"voltage": 5,  "duty_cycle": 50, "PRI_ms": 200, "default_cooldown_sec": 60*15, "max_starting_temperature": 60},
 ]
 
-TEST_CASE_DURATION_MINUTES = 10
-TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_MINUTES = 5
+TEST_CASE_DURATION_SECONDS = 10 * 60
+TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_SECONDS = 5 * 60
 LOW_VOLTAGE_VALUE = 20
 LOW_VOLTAGE_VALUE_TEST_DURATION_SECONDS = 60
 
@@ -155,7 +155,8 @@ class TestSonicationDuration:
         self.duration_msec: int | None = None
         self.num_modules: int | None = None
 
-        self.sequence_duration: float = TEST_CASE_DURATION_MINUTES * 60 # seconds
+        self.sequence_duration: float = TEST_CASE_DURATION_SECONDS
+        self.starting_test_case: int = 1
 
         # Flags from args
         self.use_external_power = self.args.external_power
@@ -265,27 +266,29 @@ class TestSonicationDuration:
                 break
             self.logger.info("Invalid selection. Please try again.")
 
-    # def _select_test_case(self) -> None:
-    #     # Test case selection
-    #     if self.args.test_case is not None:
-    #         self.test_case_num = self.args.test_case
-    #         self.test_case = TEST_CASES[self.test_case_num]
-    #     else:
-    #         self.logger.info("\nAvailable Thermal Stress Test Cases:")
-    #         for idx, case in TEST_CASES.items():
-    #             total = format_hhmmss(case["sequence_duration"])
-    #             self.logger.info(
-    #                 f"{idx}. {case['voltage']}V, "
-    #                 f"{case['duty_cycle_pct']}% Duty Cycle, {total} total"
-    #             )
+    def _select_starting_test_case(self) -> None:
 
-    #         while True:
-    #             choice = input(f"Select a test case by number {list(TEST_CASES.keys())}: ").strip()
-    #             if choice.isdigit() and int(choice) in TEST_CASES:
-    #                 self.test_case_num = int(choice)
-    #                 self.test_case = TEST_CASES[self.test_case_num]
-    #                 break
-    #             self.logger.info("Invalid selection. Please try again.")
+        valid_test_nums = list(range(1, len(TEST_CASES) + 1))
+
+        # Test case selection
+        if self.args.test_case is not None:
+            self.starting_test_case = int(self.args.test_case)
+        else:
+            self.logger.info("\nAvailable Test Cases:")
+            for test_id, test_case in enumerate(TEST_CASES, start=1):
+                self.logger.info(
+                    f"Test Case {test_id}. {test_case['voltage']}V, "
+                    f"{test_case['duty_cycle']}% Duty Cycle, total"
+                )
+
+            while True:
+                choice = input(f"Press enter to run through all test cases or select a test case by number to start at: ")
+                if choice == "":
+                    break
+                if choice.isdigit() and int(choice) in valid_test_nums:
+                    self.starting_test_case = int(choice)
+                    break
+                self.logger.info("Invalid selection. Please try again.")
 
     def _derive_test_case_parameters(self) -> None:
         # Derive test-case-specific parameters
@@ -524,7 +527,7 @@ class TestSonicationDuration:
                 last_log_time = time_elapsed
                 if not self.use_external_power and console_voltage is not None:
                     self.logger.info(
-                        "  Console Temp: %.2f°C, TX Temp: %.2f°C, Ambient Temp: %.2f°C",
+                        "  Console Voltage: %.2f V",
                         console_voltage,
                     )
 
@@ -644,22 +647,25 @@ class TestSonicationDuration:
 
     def _verify_start_conditions(self, test_case_id, starting_temperature) -> None:
         """Monitor cooldown period before starting the test."""
+        print(f"test_case_id: {test_case_id} starting_temperature: {starting_temperature}")
         temp = self.interface.txdevice.get_temperature()  # Initial read to populate temperature
+        print(f"Initial TX temperature: {temp}C")
         while temp > starting_temperature:
+            print("while loop entered")
             self.logger.info(f"Current temperature of {temp}C is greater than max starting "
                              f"temperature of {starting_temperature}C for test case {test_case_id}. "
-                             f"Transmitter will turn off for {TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_MINUTES} minutes to cool down and then check again.")
+                             f"Transmitter will turn off for {TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_SECONDS // 60} minutes to cool down and then check again.")
             self.turn_off_console_and_tx()
             self.cleanup_interface()
-            time.sleep(TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_MINUTES * 60)  # Wait before rechecking
+            time.sleep(TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_SECONDS)  # Wait before rechecking
             self.connect_device()
             self.verify_communication()
             temp = self.interface.txdevice.get_temperature()  # Update temperature after cooldown
         
-        if not self.hw_simulate:
-            with contextlib.suppress(Exception):
-                self.turn_off_console_and_tx()
-            self.cleanup_interface()
+        # if not self.hw_simulate:
+        #     with contextlib.suppress(Exception):
+        #         self.turn_off_console_and_tx()
+        #     self.cleanup_interface()
 
     # def _override_duration_if_low_voltage(self) -> None:
     #             # if voltage value is 20 or less do a separate cycle
@@ -740,11 +746,15 @@ class TestSonicationDuration:
         try:
             self._select_num_modules()
             self._select_frequency()
+            self._select_starting_test_case()
         except Exception as e:
             self.logger.error("Error during initial selection: %s", e)
             sys.exit(1)
 
-        for test_id, case_parameters in enumerate(TEST_CASES, start=1):
+        for test_id, case_parameters in enumerate(TEST_CASES[self.starting_test_case-1:], start=self.starting_test_case):
+            print("test_id:", test_id)
+            print(f"case_parameters: {case_parameters}")
+            
             self.voltage = float(case_parameters["voltage"])
             self.interval_msec = int(case_parameters["PRI_ms"])
             self.duration_msec = int(case_parameters["duty_cycle"] / 100 * self.interval_msec)
@@ -752,13 +762,12 @@ class TestSonicationDuration:
             print(f"self.voltage: {self.voltage}")
             print(f"self.duration_msec: {self.duration_msec}")
             print(f"self.interval_msec: {self.interval_msec}")
-            print(f"test_case_id: {test_id}")
-            print(f"starting test case {test_id} out of {len(TEST_CASES)}")
+            print(f"starting test case {self.starting_test_case} out of {len(TEST_CASES)}")
 
             try:
                 # Interactive selection
                 
-                # self._select_test_case()
+
                 # self._derive_test_case_parameters()
                     # Connect and configure
                 if not self.hw_simulate:
@@ -963,14 +972,14 @@ Examples:
         metavar="KHZ",
         help="TX frequency in kHz (overrides interactive selection).",
     )
-    # behavior_group.add_argument(
-    #     "--test-case",
-    #     type=int,
-    #     choices=list(TEST_CASES.keys()),
-    #     default=None,
-    #     metavar="N",
-    #     help="Predefined test case number (overrides interactive selection).",
-    # )
+    behavior_group.add_argument(
+        "--test-case",
+        type=int,
+        choices=range(1, len(TEST_CASES) + 1),
+        default=None,
+        metavar="N",
+        help="Starting test case number (overrides interactive selection).",
+    )
 
     # Safety thresholds
     safety_group = parser.add_argument_group("Safety Thresholds")
