@@ -406,7 +406,8 @@ class TestSonicationDuration:
             self.logger.error("Error retrieving console firmware version: %s", e)
 
         try:
-            for i in range(1, self.args.num_modules+1):
+            for i in range(1, self.num_modules+1):
+                print(f"num_modules: {self.num_modules}")
                 tx_fw = self.interface.txdevice.get_version(module=i)
                 self.logger.info("TX Device %d Firmware Version: %s", i, tx_fw)
         except Exception as e:
@@ -419,11 +420,11 @@ class TestSonicationDuration:
 
         if num_tx_devices == 0:
             raise ValueError("No TX7332 devices found.")
-        elif num_tx_devices == self.args.num_modules * 2:
+        elif num_tx_devices == self.num_modules * 2:
             self.logger.info(f"Number of TX7332 devices found: {num_tx_devices}")
             return 32 * num_tx_devices
         else:
-            raise Exception(f"Number of TX7332 devices found: {num_tx_devices} != 2x{self.args.num_modules}")
+            raise Exception(f"Number of TX7332 devices found: {num_tx_devices} != 2x{self.num_modules}")
 
     def configure_solution(self) -> None:
         """Configure the beamforming solution and load it into the device."""
@@ -432,7 +433,7 @@ class TestSonicationDuration:
 
         db_path = self.openlifu_dir / "db_dvc"
         db = Database(db_path)
-        arr = db.load_transducer(f"openlifu_{self.args.num_modules}x400_evt1")
+        arr = db.load_transducer(f"openlifu_{self.num_modules}x400_evt1")
         arr.sort_by_pin()
 
         # Focus at (0, 0, 50 mm)
@@ -645,9 +646,9 @@ class TestSonicationDuration:
         """Monitor cooldown period before starting the test."""
         temp = self.interface.txdevice.get_temperature()  # Initial read to populate temperature
         while temp > starting_temperature:
-            self.logger.info(f"Current temperature of {temp} is greater than max starting "
-                             f"temperature of {starting_temperature} for test case {test_case_id}. "
-                             f"Will turn off transmitter for {TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_MINUTES} minutes to cool down and then check again.")
+            self.logger.info(f"Current temperature of {temp}C is greater than max starting "
+                             f"temperature of {starting_temperature}C for test case {test_case_id}. "
+                             f"Transmitter will turn off for {TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_MINUTES} minutes to cool down and then check again.")
             self.turn_off_console_and_tx()
             self.cleanup_interface()
             time.sleep(TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_MINUTES * 60)  # Wait before rechecking
