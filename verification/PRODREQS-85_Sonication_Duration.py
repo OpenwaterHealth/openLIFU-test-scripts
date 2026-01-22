@@ -74,10 +74,12 @@ TEST_CASES = [
     {"voltage": 5,  "duty_cycle": 50, "PRI_ms": 200, "max_starting_temperature": 60},
 ]
 
-TEST_CASE_DURATION_SECONDS = 10 * 60
+TEST_CASE_DURATION_SECONDS = 10
 TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_SECONDS = 5 * 60
 LOW_VOLTAGE_VALUE = 20
-LOW_VOLTAGE_VALUE_TEST_DURATION_SECONDS = 60
+LOW_VOLTAGE_VALUE_TEST_DURATION_SECONDS = 10
+LOW_VOLTAGE_VALUE_DEVIATION_PERCENTAGE = .1  # percent
+
 
 # Pulse/sequence timing
 INTERVAL_MSEC = {1: 100, 2: 200}  # Default to 100 ms interval
@@ -410,7 +412,6 @@ class TestSonicationDuration:
 
         try:
             for i in range(1, self.num_modules+1):
-                print(f"num_modules: {self.num_modules}")
                 tx_fw = self.interface.txdevice.get_version(module=i)
                 self.logger.info("TX Device %d Firmware Version: %s", i, tx_fw)
         except Exception as e:
@@ -486,6 +487,35 @@ class TestSonicationDuration:
 
         self.logger.info("Solution configured for Test Case %s.", self.test_case_num)
 
+    def start_monitoring_threads(self) -> None:
+
+        self.shutdown_event.clear()
+        self.sequence_complete_event.clear()
+        self.temperature_shutdown_event.clear()
+
+        temp_thread = threading.Thread(
+            target=self.monitor_temperature,
+            name="TemperatureMonitorThread",
+            daemon=True,
+        )
+        completion_thread = threading.Thread(
+            target=self.exit_on_time_complete,
+            args=(self.sequence_duration,),
+            name="SequenceCompletionThread",
+            daemon=True,
+        )
+
+        if self.voltage <= LOW_VOLTAGE_VALUE:
+            voltage_thread = threading.Thread(
+                target=self.monitor_console_voltage,
+                name="ConsoleVoltageMonitorThread",
+                daemon=True,
+            )
+            voltage_thread.start()
+
+        temp_thread.start()
+        completion_thread.start()
+
     def monitor_console_voltage(self) -> None:
         """Thread target: monitor console voltage."""
         if self.hw_simulate:
@@ -513,6 +543,18 @@ class TestSonicationDuration:
                 if not self.use_external_power:
                     with self.mutex:
                         console_voltage = self.interface.hvcontroller.get_voltage()
+                        deviation_limit = self.voltage * LOW_VOLTAGE_VALUE_DEVIATION_PERCENTAGE / 100
+                        deviation_pct = abs(console_voltage - self.voltage) / self.voltage * 100
+
+                        if abs(console_voltage - self.voltage) > deviation_limit:
+                            self.logger.warning(
+                                "Console voltage %.2fV deviates %.2f%%, which is more than the %.2f%% limit from expected voltage %.2f V.",
+                                console_voltage,
+                                deviation_pct,
+                                LOW_VOLTAGE_VALUE_DEVIATION_PERCENTAGE,
+                                self.voltage,
+                            )
+                            break
 
             except SerialException as e:
                 self.logger.error("SerialException encountered while reading console voltage: %s", e)
@@ -788,6 +830,10 @@ class TestSonicationDuration:
                 test_status = "running"
 
                 # Start monitoring threads
+                self.shutdown_event.clear()
+                self.sequence_complete_event.clear()
+                self.temperature_shutdown_event.clear()
+
                 temp_thread = threading.Thread(
                     target=self.monitor_temperature,
                     name="TemperatureMonitorThread",
@@ -810,6 +856,10 @@ class TestSonicationDuration:
 
                 temp_thread.start()
                 completion_thread.start()
+
+                # temp_thread.start()
+                # completion_thread.start()
+                # self.start_monitoring_threads()
 
                 # Wait for threads or user interrupt
                 try:
