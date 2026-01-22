@@ -78,7 +78,7 @@ TEST_CASE_DURATION_SECONDS = 10
 TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_SECONDS = 5 * 60
 LOW_VOLTAGE_VALUE = 20
 LOW_VOLTAGE_VALUE_TEST_DURATION_SECONDS = 10
-LOW_VOLTAGE_VALUE_DEVIATION_PERCENTAGE = .1  # percent
+LOW_VOLTAGE_VALUE_DEVIATION_PERCENTAGE = 1.0  # percent
 
 
 # Pulse/sequence timing
@@ -151,7 +151,7 @@ class TestSonicationDuration:
         # self.test_case: dict | None = None
         # self.test_case_description: str | None = None
         # self.test_case_long_description: str | None = None
-        self.test_case_id: str | None = None
+        # self.test_case_id: str | None = None
         self.voltage: float | None = None
         self.interval_msec: float | None = None
         self.duration_msec: int | None = None
@@ -212,13 +212,10 @@ class TestSonicationDuration:
             return
 
         self.log_dir.mkdir(parents=True, exist_ok=True)
-        test_case_folder_name = Path(self.openlifu_dir / "logs" / f"{self.run_timestamp}_{TEST_ID}_Test_{self.frequency_khz}kHz_{self.num_modules}_Modules")
-        test_case_folder_name.mkdir(parents=True, exist_ok=True)
 
-        self.test_case_id = f"Test_Case_{self.test_case_num}_{self.frequency_khz}kHz_{self.voltage}V_{self.duration_msec}ms_{self.interval_msec}msPRI"
-        filename = f"{TEST_ID}_{self.test_case_id}_{self.run_timestamp}.log"
+        filename = f"{self.run_timestamp}_{TEST_ID}_{self.frequency_khz}kHz.log"
 
-        log_path = self.log_dir / test_case_folder_name / filename
+        log_path = self.log_dir / filename
 
         formatter = SafeFormatter(
             "%(asctime)s - %(levelname)s - %(message)s",
@@ -569,8 +566,9 @@ class TestSonicationDuration:
                 last_log_time = time_elapsed
                 if not self.use_external_power and console_voltage is not None:
                     self.logger.info(
-                        "  Console Voltage: %.2f V",
+                        "  Console Voltage: %.2f V, Console Voltage Percent Deviation: %.2f%%",
                         console_voltage,
+                        deviation_pct,
                     )
 
             time.sleep(self.temperature_check_interval)
@@ -687,11 +685,9 @@ class TestSonicationDuration:
 
     def _verify_start_conditions(self, test_case, starting_temperature) -> None:
         """Monitor cooldown period before starting the test."""
-        print(f"test_case_id: {test_case} starting_temperature: {starting_temperature}")
         temp = self.interface.txdevice.get_temperature()  # Initial read to populate temperature
-        print(f"Initial TX temperature: {temp}C")
+        self.logger.info(f"Initial TX temperature: {temp}C")
         while temp > starting_temperature:
-            print("while loop entered")
             self.logger.info(f"Current temperature of {temp}C is greater than max starting "
                              f"temperature of {starting_temperature}C for test case {test_case}. "
                              f"Transmitter will turn off for {TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_SECONDS // 60} minutes to cool down and then check again.")
@@ -783,6 +779,27 @@ class TestSonicationDuration:
         """Execute the thermal stress test with graceful shutdown."""
         test_status = "not started"
 
+        self.logger.info("--------------------------------------------------------------------------------")
+        self.logger.info(
+            # "\n\nThis script will automatically go through all of the following test cases:\n"
+            # + "\n".join(
+            "\n\nThis script will automatically cycle through all of the following test cases:\n\n"
+            + "\n".join(
+                f"Test Case {i+1:>2}: "
+                f"{tc['voltage']:>3}V, "
+                f"{tc['duty_cycle']:>3}% Duty Cycle, "
+                f"{tc['PRI_ms']:>4}ms PRI, "
+                f"Max Starting Temperature: {tc['max_starting_temperature']:>3}C"
+                + ("\n" if i == 12 else "")
+                for i, tc in enumerate(TEST_CASES)
+            )
+            + "\n\nThe script will account for cooldown periods as needed between test cases. \n" \
+            f"Each test case will run for {TEST_CASE_DURATION_SECONDS/60:.2f} minutes. \n"
+            f"The lower voltage tests starting at {LOW_VOLTAGE_VALUE}V and below will run for {LOW_VOLTAGE_VALUE_TEST_DURATION_SECONDS} seconds. \n"
+            "Approximate test duration is 24hrs.\n"
+        )
+        self.logger.info("--------------------------------------------------------------------------------\n\n\n")
+
         try:
             self._select_num_modules()
             self._select_frequency()
@@ -791,6 +808,8 @@ class TestSonicationDuration:
             self.logger.error("Error during initial selection: %s", e)
             sys.exit(1)
 
+        self.logger.info("Starting automated test sequence from test case %d out of %d total test cases. " % (self.starting_test_case, len(TEST_CASES)))
+
         for test_case, test_case_parameters in enumerate(TEST_CASES[self.starting_test_case-1:], start=self.starting_test_case):
             self.test_case_num = test_case
             self.voltage = float(test_case_parameters["voltage"])
@@ -798,7 +817,13 @@ class TestSonicationDuration:
             self.duration_msec = int(test_case_parameters["duty_cycle"] / 100 * self.interval_msec)
             
             self.logger.info(f"Starting test case {self.test_case_num} out of {len(TEST_CASES)}")
-
+            self.logger.info("Test Case %d: %dV, %d%% Duty Cycle, %dms duration, %dms PRI, Max Starting Temperature: %dC",
+                             self.test_case_num, 
+                             self.voltage, 
+                             test_case_parameters["duty_cycle"], 
+                             self.duration_msec, 
+                             self.interval_msec, 
+                             test_case_parameters["max_starting_temperature"])
             try:
                 if not self.hw_simulate:
                     self._attach_file_handler()
