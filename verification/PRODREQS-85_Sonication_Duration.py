@@ -77,7 +77,7 @@ TEST_CASES = [
 TEST_CASE_DURATION_SECONDS = 10 * 60
 TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_SECONDS = 5 * 60
 LOW_VOLTAGE_VALUE = 20
-LOW_VOLTAGE_VALUE_TEST_DURATION_SECONDS = 10
+LOW_VOLTAGE_VALUE_TEST_DURATION_SECONDS = 60
 LOW_VOLTAGE_VALUE_DEVIATION_PERCENTAGE = 2.0  # percent
 
 
@@ -777,7 +777,7 @@ class TestSonicationDuration:
         finally:
             self.interface = None
 
-    def _print_banner(self) -> None:
+    def print_banner(self) -> None:
         self.logger.info("Selected frequency: %dkHz", self.frequency_khz)
         self.logger.info("Number of modules: %d", self.num_modules)
 
@@ -792,7 +792,7 @@ class TestSonicationDuration:
                 f"{tc['duty_cycle']:>3}% Duty Cycle, "
                 f"{tc['PRI_ms']:>4}ms PRI, "
                 f"Max Starting Temperature: {tc['max_starting_temperature']:>3}C"
-                + ("\n" if i == 12 else "")
+                + ("\n" if i == len(TEST_CASES)/2 else "")
                 for i, tc in enumerate(TEST_CASES[self.starting_test_case-1:], start=self.starting_test_case)
             )
             + "\n\nThe script will account for cooldown periods as needed between test cases. \n" \
@@ -802,7 +802,7 @@ class TestSonicationDuration:
         )
         self.logger.info("--------------------------------------------------------------------------------\n\n\n")
 
-    def _print_test_summary(self) -> None:
+    def print_test_summary(self) -> None:
         self.logger.info("--------------------------------------------------------------------------------")
         self.logger.info(
             "\n\nTest Case Summary:\n\n"
@@ -813,7 +813,7 @@ class TestSonicationDuration:
                 f"{tc['PRI_ms']:>4}ms PRI, "
                 f"Max Starting Temperature: {tc['max_starting_temperature']:>3}C  --> "
                 f"{self.test_results.get(i, 'NOT RUN')}"
-                + ("\n" if i == 12 else "")
+                + ("\n" if i == len(TEST_CASES)/2 else "")
                 for i, tc in enumerate(TEST_CASES[self.starting_test_case-1:], start=self.starting_test_case)
             ) + "\n"
         )
@@ -843,7 +843,7 @@ class TestSonicationDuration:
             self._select_frequency()
             self._select_starting_test_case()
             self._attach_file_handler()
-            self._print_banner()
+            self.print_banner()
         except Exception as e:
             self.logger.error("Error during initial selection: %s", e)
             sys.exit(1)
@@ -1005,7 +1005,7 @@ class TestSonicationDuration:
                     )
                     self.test_results[self.test_case_num] = "FAILED (unexpected error)"
 
-        self._print_test_summary()    
+        self.print_test_summary()    
 
 def frequency_khz(value: str) -> int:
     ivalue = int(value)
@@ -1174,17 +1174,19 @@ def main() -> None:
     try:
         test.run()
     except KeyboardInterrupt:
-        print("\nUser interrupted. Shutting down...")
+        test.logger.info("\nUser interrupted. Shutting down...")
         test.shutdown_event.set()
         test.stop_logging = True
         time.sleep(0.5)
         with contextlib.suppress(Exception):
+            test.print_test_summary()
             test.turn_off_console_and_tx()
         with contextlib.suppress(Exception):
             test.cleanup_interface()
         sys.exit(0)
     except Exception as e:
-        print(f"\nFatal error: {e}")
+        test.logger.error(f"\nFatal error: {e}")
+        test.print_test_summary()
         with contextlib.suppress(Exception):
             test.turn_off_console_and_tx()
         with contextlib.suppress(Exception):
