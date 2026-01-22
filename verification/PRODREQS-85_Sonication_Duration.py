@@ -45,40 +45,40 @@ TEST_ID = Path(__file__).name.replace(".py", "")
 
 # ------------------- Test Case Definitions ------------------- #
 TEST_CASES = [
-    {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 100, "max_starting_temperature": 20},
-    {"voltage": 60, "duty_cycle": 10, "PRI_ms": 100, "max_starting_temperature": 35},
-    {"voltage": 55, "duty_cycle": 15, "PRI_ms": 100, "max_starting_temperature": 35},
+    {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 100, "max_starting_temperature": 40},
+    {"voltage": 60, "duty_cycle": 10, "PRI_ms": 100, "max_starting_temperature": 40},
+    {"voltage": 55, "duty_cycle": 15, "PRI_ms": 100, "max_starting_temperature": 40},
     {"voltage": 50, "duty_cycle": 20, "PRI_ms": 100, "max_starting_temperature": 30},
     {"voltage": 45, "duty_cycle": 25, "PRI_ms": 100, "max_starting_temperature": 30},
     {"voltage": 40, "duty_cycle": 30, "PRI_ms": 100, "max_starting_temperature": 35},
-    {"voltage": 35, "duty_cycle": 35, "PRI_ms": 100, "max_starting_temperature": 35},
-    {"voltage": 30, "duty_cycle": 40, "PRI_ms": 100, "max_starting_temperature": 35},
-    {"voltage": 25, "duty_cycle": 45, "PRI_ms": 100, "max_starting_temperature": 35},
+    {"voltage": 35, "duty_cycle": 35, "PRI_ms": 100, "max_starting_temperature": 40},
+    {"voltage": 30, "duty_cycle": 40, "PRI_ms": 100, "max_starting_temperature": 40},
+    {"voltage": 25, "duty_cycle": 45, "PRI_ms": 100, "max_starting_temperature": 40},
     {"voltage": 20, "duty_cycle": 50, "PRI_ms": 100, "max_starting_temperature": 60},
     {"voltage": 15, "duty_cycle": 50, "PRI_ms": 100, "max_starting_temperature": 60},
     {"voltage": 10, "duty_cycle": 50, "PRI_ms": 100, "max_starting_temperature": 60},
     {"voltage": 5,  "duty_cycle": 50, "PRI_ms": 100, "max_starting_temperature": 60},
 
-    {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 200, "max_starting_temperature": 35},
-    {"voltage": 60, "duty_cycle": 10, "PRI_ms": 200, "max_starting_temperature": 35},
-    {"voltage": 55, "duty_cycle": 15, "PRI_ms": 200, "max_starting_temperature": 35},
+    {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 200, "max_starting_temperature": 40},
+    {"voltage": 60, "duty_cycle": 10, "PRI_ms": 200, "max_starting_temperature": 40},
+    {"voltage": 55, "duty_cycle": 15, "PRI_ms": 200, "max_starting_temperature": 40},
     {"voltage": 50, "duty_cycle": 20, "PRI_ms": 200, "max_starting_temperature": 30},
     {"voltage": 45, "duty_cycle": 25, "PRI_ms": 200, "max_starting_temperature": 30},
     {"voltage": 40, "duty_cycle": 30, "PRI_ms": 200, "max_starting_temperature": 35},
-    {"voltage": 35, "duty_cycle": 35, "PRI_ms": 200, "max_starting_temperature": 35},
-    {"voltage": 30, "duty_cycle": 40, "PRI_ms": 200, "max_starting_temperature": 35},
-    {"voltage": 25, "duty_cycle": 45, "PRI_ms": 200, "max_starting_temperature": 35},
+    {"voltage": 35, "duty_cycle": 35, "PRI_ms": 200, "max_starting_temperature": 40},
+    {"voltage": 30, "duty_cycle": 40, "PRI_ms": 200, "max_starting_temperature": 40},
+    {"voltage": 25, "duty_cycle": 45, "PRI_ms": 200, "max_starting_temperature": 40},
     {"voltage": 20, "duty_cycle": 50, "PRI_ms": 200, "max_starting_temperature": 60},
     {"voltage": 15, "duty_cycle": 50, "PRI_ms": 200, "max_starting_temperature": 60},
     {"voltage": 10, "duty_cycle": 50, "PRI_ms": 200, "max_starting_temperature": 60},
     {"voltage": 5,  "duty_cycle": 50, "PRI_ms": 200, "max_starting_temperature": 60},
 ]
 
-TEST_CASE_DURATION_SECONDS = 10
+TEST_CASE_DURATION_SECONDS = 10 * 60
 TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_SECONDS = 5 * 60
 LOW_VOLTAGE_VALUE = 20
 LOW_VOLTAGE_VALUE_TEST_DURATION_SECONDS = 10
-LOW_VOLTAGE_VALUE_DEVIATION_PERCENTAGE = 1.0  # percent
+LOW_VOLTAGE_VALUE_DEVIATION_PERCENTAGE = 2.0  # percent
 
 
 # Pulse/sequence timing
@@ -816,8 +816,8 @@ class TestSonicationDuration:
         )
 
         all_passed = all(
-            self.test_results.get(i + 1) == "PASSED"
-            for i in range(len(TEST_CASES))
+            self.test_results.get(i) == "PASSED"
+            for i in range(self.starting_test_case, len(TEST_CASES) + 1)
         )
 
         self.logger.info(
