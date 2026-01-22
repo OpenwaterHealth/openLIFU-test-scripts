@@ -778,6 +778,9 @@ class TestSonicationDuration:
             self.interface = None
 
     def _print_banner(self) -> None:
+        self.logger.info("Selected frequency: %dkHz", self.frequency_khz)
+        self.logger.info("Number of modules: %d", self.num_modules)
+
         self.logger.info("--------------------------------------------------------------------------------")
         self.logger.info(
             # "\n\nThis script will automatically go through all of the following test cases:\n"
@@ -839,6 +842,7 @@ class TestSonicationDuration:
             self._select_num_modules()
             self._select_frequency()
             self._select_starting_test_case()
+            self._attach_file_handler()
             self._print_banner()
         except Exception as e:
             self.logger.error("Error during initial selection: %s", e)
@@ -862,7 +866,7 @@ class TestSonicationDuration:
                              test_case_parameters["max_starting_temperature"])
             try:
                 if not self.hw_simulate:
-                    self._attach_file_handler()
+                    # self._attach_file_handler()
                     self.connect_device()
                     self.verify_communication()
                     self.get_firmware_versions()
