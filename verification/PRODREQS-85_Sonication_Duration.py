@@ -137,6 +137,7 @@ class TestSonicationDuration:
         self.shutdown_event = threading.Event()
         self.sequence_complete_event = threading.Event()
         self.temperature_shutdown_event = threading.Event()
+        self.voltage_shutdown_event = threading.Event()
         
         # Threading locks
         self.mutex = threading.Lock()
@@ -159,6 +160,7 @@ class TestSonicationDuration:
 
         self.sequence_duration: float = TEST_CASE_DURATION_SECONDS
         self.starting_test_case: int = 1
+        self.test_results: dict[int, str] = {}
 
         # Flags from args
         self.use_external_power = self.args.external_power
@@ -489,6 +491,7 @@ class TestSonicationDuration:
         self.shutdown_event.clear()
         self.sequence_complete_event.clear()
         self.temperature_shutdown_event.clear()
+        self.voltage_shutdown_event.clear()
 
         temp_thread = threading.Thread(
             target=self.monitor_temperature,
@@ -566,7 +569,7 @@ class TestSonicationDuration:
                 last_log_time = time_elapsed
                 if not self.use_external_power and console_voltage is not None:
                     self.logger.info(
-                        "  Console Voltage: %.2f V, Console Voltage Percent Deviation: %.2f%%",
+                        "  Console Voltage: %6.2f V, Console Voltage Percent Deviation: %2.2f%%",
                         console_voltage,
                         deviation_pct,
                     )
@@ -575,7 +578,7 @@ class TestSonicationDuration:
 
         self.logger.warning("Console voltage shutdown triggered.")
         self.shutdown_event.set()
-        self.temperature_shutdown_event.set()
+        self.voltage_shutdown_event.set()
 
     def monitor_temperature(self) -> None:
         """Thread target: monitor temperatures and trigger shutdown on safety violations."""
@@ -774,24 +777,20 @@ class TestSonicationDuration:
         finally:
             self.interface = None
 
-
-    def run(self) -> None:
-        """Execute the thermal stress test with graceful shutdown."""
-        test_status = "not started"
-
+    def _print_banner(self) -> None:
         self.logger.info("--------------------------------------------------------------------------------")
         self.logger.info(
             # "\n\nThis script will automatically go through all of the following test cases:\n"
             # + "\n".join(
             "\n\nThis script will automatically cycle through all of the following test cases:\n\n"
             + "\n".join(
-                f"Test Case {i+1:>2}: "
+                f"Test Case {i:>2}: "
                 f"{tc['voltage']:>3}V, "
                 f"{tc['duty_cycle']:>3}% Duty Cycle, "
                 f"{tc['PRI_ms']:>4}ms PRI, "
                 f"Max Starting Temperature: {tc['max_starting_temperature']:>3}C"
                 + ("\n" if i == 12 else "")
-                for i, tc in enumerate(TEST_CASES)
+                for i, tc in enumerate(TEST_CASES[self.starting_test_case-1:], start=self.starting_test_case)
             )
             + "\n\nThe script will account for cooldown periods as needed between test cases. \n" \
             f"Each test case will run for {TEST_CASE_DURATION_SECONDS/60:.2f} minutes. \n"
@@ -800,10 +799,47 @@ class TestSonicationDuration:
         )
         self.logger.info("--------------------------------------------------------------------------------\n\n\n")
 
+    def _print_test_summary(self) -> None:
+        self.logger.info("--------------------------------------------------------------------------------")
+        self.logger.info(
+            "\n\nTest Case Summary:\n\n"
+            + "\n".join(
+                f"Test Case {i:>2}: "
+                f"{tc['voltage']:>3}V, "
+                f"{tc['duty_cycle']:>3}% Duty Cycle, "
+                f"{tc['PRI_ms']:>4}ms PRI, "
+                f"Max Starting Temperature: {tc['max_starting_temperature']:>3}C  --> "
+                f"{self.test_results.get(i, 'NOT RUN')}"
+                + ("\n" if i == 12 else "")
+                for i, tc in enumerate(TEST_CASES[self.starting_test_case-1:], start=self.starting_test_case)
+            ) + "\n"
+        )
+
+        all_passed = all(
+            self.test_results.get(i + 1) == "PASSED"
+            for i in range(len(TEST_CASES))
+        )
+
+        self.logger.info(
+            f"{sum(1 for r in self.test_results.values() if r == 'PASSED')} out of {len(TEST_CASES)-self.starting_test_case+1} test cases passed."
+        )
+
+
+        self.logger.info(
+            "\n\nOVERALL RESULT: %s\n",
+            "PASSED" if all_passed else "FAILED",
+        )
+        # self.logger.info("--------------------------------------------------------------------------------\n\n")
+
+    def run(self) -> None:
+        """Execute the thermal stress test with graceful shutdown."""
+        test_status = "not started"
+
         try:
             self._select_num_modules()
             self._select_frequency()
             self._select_starting_test_case()
+            self._print_banner()
         except Exception as e:
             self.logger.error("Error during initial selection: %s", e)
             sys.exit(1)
@@ -858,6 +894,7 @@ class TestSonicationDuration:
                 self.shutdown_event.clear()
                 self.sequence_complete_event.clear()
                 self.temperature_shutdown_event.clear()
+                self.voltage_shutdown_event.clear()
 
                 temp_thread = threading.Thread(
                     target=self.monitor_temperature,
@@ -932,6 +969,8 @@ class TestSonicationDuration:
                         test_status = "passed"
                     elif self.temperature_shutdown_event.is_set():
                         test_status = "temperature shutdown"
+                    elif self.voltage_shutdown_event.is_set():
+                        test_status = "voltage deviation"
                     else:
                         test_status = "error"
 
@@ -944,13 +983,25 @@ class TestSonicationDuration:
 
                 # Final status log
                 if test_status == "passed":
-                    self.logger.info(F"TEST CASE {self.test_case_num} PASSED.")
+                    self.logger.info("TEST CASE %d PASSED.", self.test_case_num)
+                    self.test_results[self.test_case_num] = "PASSED"
                 elif test_status == "temperature shutdown":
-                    self.logger.info(f"TEST CASE {self.test_case_num} FAILED.")
+                    self.logger.info("TEST CASE %d FAILED.", self.test_case_num)
+                    self.test_results[self.test_case_num] = "FAILED (temperature shutdown)"
                 elif test_status == "aborted by user":
-                    self.logger.info(f"TEST CASE {self.test_case_num} ABORTED by user.")
+                    self.logger.info("TEST CASE %d ABORTED by user.", self.test_case_num)
+                    self.test_results[self.test_case_num] = "ABORTED"
+                elif test_status == "voltage deviation":
+                    self.logger.info("TEST CASE %d FAILED.", self.test_case_num)
+                    self.test_results[self.test_case_num] = "FAILED (voltage deviation)"
                 else:
-                    self.logger.info(f"TEST CASE {self.test_case_num} FAILED due to unexpected error.")
+                    self.logger.info(
+                        "TEST CASE %d FAILED due to unexpected error.",
+                        self.test_case_num,
+                    )
+                    self.test_results[self.test_case_num] = "FAILED (unexpected error)"
+
+        self._print_test_summary()    
 
 def frequency_khz(value: str) -> int:
     ivalue = int(value)
