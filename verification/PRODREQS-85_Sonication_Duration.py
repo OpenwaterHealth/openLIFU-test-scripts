@@ -48,21 +48,21 @@ TEST_CASES = [
     {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 100, "max_starting_temperature": 40},
     {"voltage": 60, "duty_cycle": 10, "PRI_ms": 100, "max_starting_temperature": 40},
     {"voltage": 55, "duty_cycle": 15, "PRI_ms": 100, "max_starting_temperature": 40},
-    {"voltage": 50, "duty_cycle": 20, "PRI_ms": 100, "max_starting_temperature": 30},
-    {"voltage": 45, "duty_cycle": 25, "PRI_ms": 100, "max_starting_temperature": 30},
-    {"voltage": 40, "duty_cycle": 30, "PRI_ms": 100, "max_starting_temperature": 35},
-    {"voltage": 35, "duty_cycle": 35, "PRI_ms": 100, "max_starting_temperature": 40},
-    {"voltage": 30, "duty_cycle": 40, "PRI_ms": 100, "max_starting_temperature": 40},
-    {"voltage": 25, "duty_cycle": 45, "PRI_ms": 100, "max_starting_temperature": 40},
+    {"voltage": 50, "duty_cycle": 20, "PRI_ms": 100, "max_starting_temperature": 300},
+    {"voltage": 45, "duty_cycle": 25, "PRI_ms": 100, "max_starting_temperature": 300},
+    {"voltage": 40, "duty_cycle": 30, "PRI_ms": 100, "max_starting_temperature": 350},
+    {"voltage": 35, "duty_cycle": 35, "PRI_ms": 100, "max_starting_temperature": 400},
+    {"voltage": 30, "duty_cycle": 40, "PRI_ms": 100, "max_starting_temperature": 400},
+    {"voltage": 25, "duty_cycle": 45, "PRI_ms": 100, "max_starting_temperature": 400},
     {"voltage": 20, "duty_cycle": 50, "PRI_ms": 100, "max_starting_temperature": 60},
     {"voltage": 15, "duty_cycle": 50, "PRI_ms": 100, "max_starting_temperature": 60},
     {"voltage": 10, "duty_cycle": 50, "PRI_ms": 100, "max_starting_temperature": 60},
     {"voltage": 5,  "duty_cycle": 50, "PRI_ms": 100, "max_starting_temperature": 60},
 
-    {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 200, "max_starting_temperature": 40},
-    {"voltage": 60, "duty_cycle": 10, "PRI_ms": 200, "max_starting_temperature": 40},
-    {"voltage": 55, "duty_cycle": 15, "PRI_ms": 200, "max_starting_temperature": 40},
-    {"voltage": 50, "duty_cycle": 20, "PRI_ms": 200, "max_starting_temperature": 30},
+    {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 200, "max_starting_temperature": 400},
+    {"voltage": 60, "duty_cycle": 10, "PRI_ms": 200, "max_starting_temperature": 400},
+    {"voltage": 55, "duty_cycle": 15, "PRI_ms": 200, "max_starting_temperature": 400},
+    {"voltage": 50, "duty_cycle": 20, "PRI_ms": 200, "max_starting_temperature": 300},
     {"voltage": 45, "duty_cycle": 25, "PRI_ms": 200, "max_starting_temperature": 30},
     {"voltage": 40, "duty_cycle": 30, "PRI_ms": 200, "max_starting_temperature": 35},
     {"voltage": 35, "duty_cycle": 35, "PRI_ms": 200, "max_starting_temperature": 40},
@@ -145,6 +145,7 @@ class TestSonicationDuration:
         self.stop_logging = False
 
         self.run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.start_time: float | None = None
 
         # Test configuration – set later via interactive selection
         self.frequency_khz: float | None = None
@@ -701,23 +702,7 @@ class TestSonicationDuration:
             self.verify_communication()
             temp = self.interface.txdevice.get_temperature()  # Update temperature after cooldown
         
-        # if not self.hw_simulate:
-        #     with contextlib.suppress(Exception):
-        #         self.turn_off_console_and_tx()
-        #     self.cleanup_interface()
-
-    # def _override_duration_if_low_voltage(self) -> None:
-    #             # if voltage value is 20 or less do a separate cycle
-    #     if self.voltage is not None and self.voltage <= 20:
-    #         # start sonication
-    #         self.sequence_duration = 60  # 1 minute duration for low voltage test
-            
-            
-            
-
-            # exit after x minutes where x is what, 1 min?
-            # constantly monitor adc value
-            # at least do a 5 min wait after previous cooldown
+        self.logger.info(f"TX temperature of {temp}C is within the allowed starting temperature of {starting_temperature}C. Proceeding with test case {test_case}.")
 
     def exit_on_time_complete(self, total_test_time: float) -> None:
         """Thread target: stop test when total test time is reached."""
@@ -827,6 +812,7 @@ class TestSonicationDuration:
             f"{sum(1 for r in self.test_results.values() if r == 'PASSED')} out of {len(TEST_CASES)-self.starting_test_case+1} test cases passed."
         )
 
+        self.logger.info(f"Script ran for a total of {format_hhmmss(time.time() - self.start_time)} minutes.")
 
         self.logger.info(
             "\n\nOVERALL RESULT: %s\n",
@@ -855,6 +841,7 @@ class TestSonicationDuration:
             self.voltage = float(test_case_parameters["voltage"])
             self.interval_msec = int(test_case_parameters["PRI_ms"])
             self.duration_msec = int(test_case_parameters["duty_cycle"] / 100 * self.interval_msec)
+            self.start_time = time.time()
             
             self.logger.info(f"Starting test case {self.test_case_num} out of {len(TEST_CASES)}")
             self.logger.info("Test Case %d: %dV, %d%% Duty Cycle, %dms duration, %dms PRI, Max Starting Temperature: %dC",
@@ -869,17 +856,22 @@ class TestSonicationDuration:
                     # self._attach_file_handler()
                     self.connect_device()
                     self.verify_communication()
-                    self.get_firmware_versions()
-                    self.enumerate_devices()
+                    # if test has already run at least once, skip
+                    if test_case == self.starting_test_case: 
+                        self.get_firmware_versions()
+                        self.enumerate_devices()
                     self._verify_start_conditions(test_case, test_case_parameters["max_starting_temperature"])
                 else:
                     self.logger.info("Hardware simulation enabled; skipping device configuration.")
 
                 if self.voltage is not None and self.voltage <= LOW_VOLTAGE_VALUE:
-
                     self.sequence_duration = LOW_VOLTAGE_VALUE_TEST_DURATION_SECONDS
+                else:
+                    self.sequence_duration = TEST_CASE_DURATION_SECONDS
                 
                 self.configure_solution()
+
+                self.test_cases_start_time = time.time()
 
                 # Start sonication
                 if not self.hw_simulate:
