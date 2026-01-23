@@ -150,10 +150,6 @@ class TestSonicationDuration:
         # Test configuration – set later via interactive selection
         self.frequency_khz: float | None = None
         self.test_case_num: int | None = None
-        # self.test_case: dict | None = None
-        # self.test_case_description: str | None = None
-        # self.test_case_long_description: str | None = None
-        # self.test_case_id: str | None = None
         self.voltage: float | None = None
         self.interval_msec: float | None = None
         self.duration_msec: int | None = None
@@ -291,34 +287,6 @@ class TestSonicationDuration:
                     self.starting_test_case = int(choice)
                     break
                 self.logger.info("Invalid selection. Please try again.")
-
-    # def _derive_test_case_parameters(self) -> None:
-    #     # Derive test-case-specific parameters
-    #     self.test_case_description = self.test_case["description"]
-    #     self.test_case_long_description = (
-    #         f"{self.frequency_khz}kHz, Case {self.test_case_num}: "
-    #         f"{self.test_case['voltage']}V, "
-    #         f"{self.test_case['duty_cycle_pct']}%, "
-    #         f"{self.interval_msec}ms PRI, " 
-    #         f"{format_hhmmss(self.test_case['sequence_duration'])}"
-    #     )
-    #     self.test_case_id = f"{self.frequency_khz}kHz_{self.test_case['id']}"
-    #     self.voltage = float(self.test_case["voltage"])
-    #     self.duration_msec = int(self.test_case["duty_cycle_pct"] / 100 * self.interval_msec)
-    #     self.sequence_duration = float(self.test_case["sequence_duration"])
-
-    #     self._attach_file_handler()
-
-    #     if self.hw_simulate:
-    #         self.logger.info("Beginning Test %s (TEST MODE)", self.test_case_description)
-    #         self.logger.info("TEST MODE: This is a simulated test run.")
-    #         self.logger.info("No actual hardware interactions will occur.")
-    #     else:
-    #         self.logger.info("Selected Frequency: %d kHz", self.frequency_khz)
-    #         self.logger.info("Selected Test Case: %d", self.test_case_num)
-    #         self.logger.info("Beginning Test %s", self.test_case_description)
-
-    #     self.logger.info("%s", self.test_case_long_description)   
 
     def connect_device(self) -> None:
         """Connect to the LIFU device and verify connection."""
@@ -812,7 +780,7 @@ class TestSonicationDuration:
             f"{sum(1 for r in self.test_results.values() if r == 'PASSED')} out of {len(TEST_CASES)-self.starting_test_case+1} test cases passed."
         )
 
-        self.logger.info(f"Script ran for a total of {format_hhmmss(time.time() - self.start_time)} minutes.")
+        self.logger.info(f"Script ran for a total of {format_duration(time.time() - self.start_time)} minutes.")
 
         self.logger.info(
             "\n\nOVERALL RESULT: %s\n",
@@ -835,13 +803,13 @@ class TestSonicationDuration:
             sys.exit(1)
 
         self.logger.info("Starting automated test sequence from test case %d out of %d total test cases. " % (self.starting_test_case, len(TEST_CASES)))
+        self.start_time = time.time()
 
         for test_case, test_case_parameters in enumerate(TEST_CASES[self.starting_test_case-1:], start=self.starting_test_case):
             self.test_case_num = test_case
             self.voltage = float(test_case_parameters["voltage"])
             self.interval_msec = int(test_case_parameters["PRI_ms"])
             self.duration_msec = int(test_case_parameters["duty_cycle"] / 100 * self.interval_msec)
-            self.start_time = time.time()
             
             self.logger.info(f"Starting test case {self.test_case_num} out of {len(TEST_CASES)}")
             self.logger.info("Test Case %d: %dV, %d%% Duty Cycle, %dms duration, %dms PRI, Max Starting Temperature: %dC",
@@ -853,7 +821,6 @@ class TestSonicationDuration:
                              test_case_parameters["max_starting_temperature"])
             try:
                 if not self.hw_simulate:
-                    # self._attach_file_handler()
                     self.connect_device()
                     self.verify_communication()
                     # if test has already run at least once, skip
@@ -914,10 +881,6 @@ class TestSonicationDuration:
 
                 temp_thread.start()
                 completion_thread.start()
-
-                # temp_thread.start()
-                # completion_thread.start()
-                # self.start_monitoring_threads()
 
                 # Wait for threads or user interrupt
                 try:
@@ -1006,6 +969,17 @@ def frequency_khz(value: str) -> int:
             "frequency (kHz) must be between 100 and 500 kHz"
         )
     return ivalue
+
+def format_duration(seconds: float) -> str:
+    seconds = int(seconds)
+    m, s = divmod(seconds, 60)
+    h, m = divmod(m, 60)
+
+    if h:
+        return f"{h}h {m}m {s}s"
+    if m:
+        return f"{m}m {s}s"
+    return f"{s}s"
 
 def parse_arguments() -> argparse.Namespace:
     """Parse command-line arguments."""
