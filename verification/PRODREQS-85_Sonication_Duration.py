@@ -41,7 +41,6 @@ Thermal Stress Test Script
 
 __version__ = "1.0.0"
 TEST_ID = Path(__file__).name.replace(".py", "")
-# TEST_NAME = "Thermal Stress Test"
 
 # ------------------- Test Case Definitions ------------------- #
 TEST_CASES = [
@@ -77,8 +76,8 @@ TEST_CASES = [
 TEST_CASE_DURATION_SECONDS = 10 * 60
 TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_SECONDS = 5 * 60
 LOW_VOLTAGE_VALUE = 20
-LOW_VOLTAGE_VALUE_TEST_DURATION_SECONDS = 60
-LOW_VOLTAGE_VALUE_DEVIATION_PERCENTAGE = 2.0  # percent
+LOW_VOLTAGE_VALUE_TEST_DURATION_SECONDS = 10
+
 
 
 # Pulse/sequence timing
@@ -86,9 +85,16 @@ INTERVAL_MSEC = {1: 100, 2: 200}  # Default to 100 ms interval
 NUM_MODULES = (1, 2)
 
 # Default safety / logging timing parameters
+# Temperature shutoff thresholds
 CONSOLE_SHUTOFF_TEMP_C_DEFAULT = 70.0
 TX_SHUTOFF_TEMP_C_DEFAULT = 70.0
 AMBIENT_SHUTOFF_TEMP_C_DEFAULT = 70.0
+
+# Voltage deviation limits
+VOLTAGE_DEVIATION_ABSOLUTE_VALUE_LIMIT = 2.0
+VOLTAGE_DEVIATION_PERCENTAGE_LIMIT = 2.0
+
+# Temperature monitoring intervals
 TEMPERATURE_CHECK_INTERVAL_DEFAULT = 1.0
 TEMPERATURE_LOG_INTERVAL_DEFAULT = 1.0
 
@@ -455,35 +461,34 @@ class TestSonicationDuration:
 
         self.logger.info("Solution configured for Test Case %s.", self.test_case_num)
 
-    def start_monitoring_threads(self) -> None:
+    # def start_monitoring_threads(self) -> None:
 
-        self.shutdown_event.clear()
-        self.sequence_complete_event.clear()
-        self.temperature_shutdown_event.clear()
-        self.voltage_shutdown_event.clear()
+    #     self.shutdown_event.clear()
+    #     self.sequence_complete_event.clear()
+    #     self.temperature_shutdown_event.clear()
+    #     self.voltage_shutdown_event.clear()
 
-        temp_thread = threading.Thread(
-            target=self.monitor_temperature,
-            name="TemperatureMonitorThread",
-            daemon=True,
-        )
-        completion_thread = threading.Thread(
-            target=self.exit_on_time_complete,
-            args=(self.sequence_duration,),
-            name="SequenceCompletionThread",
-            daemon=True,
-        )
+    #     temp_thread = threading.Thread(
+    #         target=self.monitor_temperature,
+    #         name="TemperatureMonitorThread",
+    #         daemon=True,
+    #     )
+    #     completion_thread = threading.Thread(
+    #         target=self.exit_on_time_complete,
+    #         args=(self.sequence_duration,),
+    #         name="SequenceCompletionThread",
+    #         daemon=True,
+    #     )
 
-        if self.voltage <= LOW_VOLTAGE_VALUE:
-            voltage_thread = threading.Thread(
-                target=self.monitor_console_voltage,
-                name="ConsoleVoltageMonitorThread",
-                daemon=True,
-            )
-            voltage_thread.start()
+    #     voltage_thread = threading.Thread(
+    #         target=self.monitor_console_voltage,
+    #         name="ConsoleVoltageMonitorThread",
+    #         daemon=True,
+    #     )
+    #     voltage_thread.start()
 
-        temp_thread.start()
-        completion_thread.start()
+    #     temp_thread.start()
+    #     completion_thread.start()
 
     def monitor_console_voltage(self) -> None:
         """Thread target: monitor console voltage."""
@@ -501,6 +506,19 @@ class TestSonicationDuration:
         start_time = time.time()
         last_log_time = 0.0
 
+        deviation_limit_percentage = self.voltage * VOLTAGE_DEVIATION_PERCENTAGE_LIMIT / 100
+        deviation_limit_absolute_value = VOLTAGE_DEVIATION_ABSOLUTE_VALUE_LIMIT
+        deviation_limit_v = max(deviation_limit_percentage, deviation_limit_absolute_value)
+        
+        self.logger.info("  Voltage Deviation Limits: %.2f V (max of %.2f%% of %.2fV (%.2fV) or %.1f V) from expected %.2f V.",
+                            deviation_limit_v,
+                            VOLTAGE_DEVIATION_PERCENTAGE_LIMIT,
+                            self.voltage,
+                            deviation_limit_percentage,
+                            deviation_limit_absolute_value,
+                            self.voltage,
+                        )
+
         while True:
             if self.shutdown_event.is_set():
                 return
@@ -510,17 +528,48 @@ class TestSonicationDuration:
             # Read temperatures
             try:
                 if not self.use_external_power:
+                    # with self.mutex:
+                    #     console_voltage = self.interface.hvcontroller.get_voltage()
+                    #     deviation_limit_percentage = self.voltage * VOLTAGE_DEVIATION_PERCENTAGE_LIMIT / 100
+                    #     deviation_limit_absolute_value = VOLTAGE_DEVIATION_ABSOLUTE_VALUE_LIMIT
+                    #     deviation_limit_v = max(deviation_limit_percentage, deviation_limit_absolute_value)
+                        
+                    #     deviation_pct = abs(console_voltage - self.voltage) / self.voltage * 100
+
+                    #     if delta_v > deviation_limit_v:
+                    #         self.logger.warning(
+                    #             "Console voltage %.2f V deviates %.2f%% (%.2f V), exceeding limit %.2f V "
+                    #             "(max of %.2f%% or %.1f V) from expected %.2f V.",
+                    #             console_voltage,
+                    #             deviation_pct,
+                    #             delta_v,
+                    #             deviation_limit_v,
+                    #             VOLTAGE_DEVIATION_PERCENTAGE_LIMIT,
+                    #             deviation_limit_absolute_value,
+                    #             self.voltage,
+                    #         )
+                    #         break
+
                     with self.mutex:
                         console_voltage = self.interface.hvcontroller.get_voltage()
-                        deviation_limit = self.voltage * LOW_VOLTAGE_VALUE_DEVIATION_PERCENTAGE / 100
-                        deviation_pct = abs(console_voltage - self.voltage) / self.voltage * 100
 
-                        if abs(console_voltage - self.voltage) > deviation_limit:
+                        deviation_limit_percentage = self.voltage * VOLTAGE_DEVIATION_PERCENTAGE_LIMIT / 100
+                        deviation_limit_absolute_value = VOLTAGE_DEVIATION_ABSOLUTE_VALUE_LIMIT
+                        deviation_limit_v = max(deviation_limit_percentage, deviation_limit_absolute_value)
+
+                        delta_v = abs(console_voltage - self.voltage)
+                        deviation_pct = delta_v / self.voltage * 100
+
+                        if delta_v > deviation_limit_v:
                             self.logger.warning(
-                                "Console voltage %.2fV deviates %.2f%%, which is more than the %.2f%% limit from expected voltage %.2f V.",
+                                "Console voltage %.2f V deviates %.2f%% (%.2f V), exceeding limit %.2f V "
+                                "(max of %.2f%% or %.1f V) from expected %.2f V.",
                                 console_voltage,
                                 deviation_pct,
-                                LOW_VOLTAGE_VALUE_DEVIATION_PERCENTAGE,
+                                delta_v,
+                                deviation_limit_v,
+                                VOLTAGE_DEVIATION_PERCENTAGE_LIMIT,
+                                deviation_limit_absolute_value,
                                 self.voltage,
                             )
                             break
@@ -538,8 +587,9 @@ class TestSonicationDuration:
                 last_log_time = time_elapsed
                 if not self.use_external_power and console_voltage is not None:
                     self.logger.info(
-                        "  Console Voltage: %6.2f V, Console Voltage Percent Deviation: %2.2f%%",
+                        "  Console Voltage: %6.2f V, Console Voltage Absolute Deviation: %3.2f V Percent Deviation: %2.2f%% ", 
                         console_voltage,
+                        delta_v,
                         deviation_pct,
                     )
 
@@ -870,31 +920,23 @@ class TestSonicationDuration:
                     name="SequenceCompletionThread",
                     daemon=True,
                 )
-
-                if self.voltage <= LOW_VOLTAGE_VALUE:
-                    voltage_thread = threading.Thread(
-                        target=self.monitor_console_voltage,
-                        name="ConsoleVoltageMonitorThread",
-                        daemon=True,
-                    )
-                    voltage_thread.start()
-
+                voltage_thread = threading.Thread(
+                    target=self.monitor_console_voltage,
+                    name="ConsoleVoltageMonitorThread",
+                    daemon=True,
+                )
+                
+                voltage_thread.start()
                 temp_thread.start()
                 completion_thread.start()
 
                 # Wait for threads or user interrupt
                 try:
-                    if self.voltage <= LOW_VOLTAGE_VALUE:
-                        while temp_thread.is_alive() and\
-                          completion_thread.is_alive() and\
-                          voltage_thread.is_alive() and\
-                            not self.shutdown_event.is_set():
-                            time.sleep(0.1)
-                    else:
-                        while temp_thread.is_alive() and\
-                            completion_thread.is_alive() and\
-                                not self.shutdown_event.is_set():
-                            time.sleep(0.1)
+                    while temp_thread.is_alive() and\
+                        completion_thread.is_alive() and\
+                        voltage_thread.is_alive() and\
+                        not self.shutdown_event.is_set():
+                        time.sleep(0.1)
                 except KeyboardInterrupt:
                     self.logger.warning("Test aborted by user KeyboardInterrupt.")
                     test_status = "aborted by user"
@@ -918,9 +960,7 @@ class TestSonicationDuration:
                 # Wait for threads to exit gracefully
                 temp_thread.join(timeout=2.0)
                 completion_thread.join(timeout=2.0)
-                
-                if self.voltage <= LOW_VOLTAGE_VALUE:
-                    voltage_thread.join(timeout=2.0)
+                voltage_thread.join(timeout=2.0)
 
                 # Determine final status
                 if test_status not in ("aborted by user", "error"):
