@@ -49,8 +49,8 @@ TEST_CASES = [
     {"voltage": 55, "duty_cycle": 15, "PRI_ms": 100, "max_starting_temperature": 40},
     {"voltage": 50, "duty_cycle": 20, "PRI_ms": 100, "max_starting_temperature": 30},
     {"voltage": 45, "duty_cycle": 25, "PRI_ms": 100, "max_starting_temperature": 30},
-    {"voltage": 40, "duty_cycle": 30, "PRI_ms": 100, "max_starting_temperature": 35},
-    {"voltage": 35, "duty_cycle": 35, "PRI_ms": 100, "max_starting_temperature": 35},
+    {"voltage": 40, "duty_cycle": 30, "PRI_ms": 100, "max_starting_temperature": 30},
+    {"voltage": 35, "duty_cycle": 35, "PRI_ms": 100, "max_starting_temperature": 30},
     {"voltage": 30, "duty_cycle": 40, "PRI_ms": 100, "max_starting_temperature": 40},
     {"voltage": 25, "duty_cycle": 45, "PRI_ms": 100, "max_starting_temperature": 40},
     {"voltage": 20, "duty_cycle": 50, "PRI_ms": 100, "max_starting_temperature": 60},
@@ -63,8 +63,8 @@ TEST_CASES = [
     {"voltage": 55, "duty_cycle": 15, "PRI_ms": 200, "max_starting_temperature": 40},
     {"voltage": 50, "duty_cycle": 20, "PRI_ms": 200, "max_starting_temperature": 30},
     {"voltage": 45, "duty_cycle": 25, "PRI_ms": 200, "max_starting_temperature": 30},
-    {"voltage": 40, "duty_cycle": 30, "PRI_ms": 200, "max_starting_temperature": 35},
-    {"voltage": 35, "duty_cycle": 35, "PRI_ms": 200, "max_starting_temperature": 35},
+    {"voltage": 40, "duty_cycle": 30, "PRI_ms": 200, "max_starting_temperature": 30},
+    {"voltage": 35, "duty_cycle": 35, "PRI_ms": 200, "max_starting_temperature": 30},
     {"voltage": 30, "duty_cycle": 40, "PRI_ms": 200, "max_starting_temperature": 40},
     {"voltage": 25, "duty_cycle": 45, "PRI_ms": 200, "max_starting_temperature": 40},
     {"voltage": 20, "duty_cycle": 50, "PRI_ms": 200, "max_starting_temperature": 60},
@@ -886,7 +886,7 @@ class TestSonicationDuration:
                 
                 self.configure_solution()
 
-                self.test_cases_start_time = time.time()
+                self.test_case_start_time = time.time()
 
                 # Start sonication
                 if not self.hw_simulate:
@@ -997,6 +997,8 @@ class TestSonicationDuration:
                         self.test_case_num,
                     )
                     self.test_results[self.test_case_num] = "FAILED (unexpected error)"
+
+                self.logger.info("TEST CASE %d ran for a total of %s.", self.test_case_num, format_duration(time.time() - self.test_case_start_time))
 
         self.print_test_summary()    
 
