@@ -570,7 +570,7 @@ class TestSonicationDuration:
                                 deviation_limit_absolute_value,
                                 self.voltage,
                             )
-                            break
+                            # break
 
             except SerialException as e:
                 self.logger.error("SerialException encountered while reading console voltage: %s", e)
