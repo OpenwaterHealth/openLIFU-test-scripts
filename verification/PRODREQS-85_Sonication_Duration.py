@@ -134,7 +134,7 @@ class TestSonicationDuration:
 
         # Derived paths
         self.openlifu_dir = Path(openlifu.__file__).parent.parent.parent.resolve()
-        self.log_dir = Path(self.args.log_dir or (self.openlifu_dir / "logs")).resolve()
+        self.log_dir = Path(self.args.log_dir or (Path(__file__).resolve().parents[1] / "logs"))
         
         # Runtime attributes
         self.interface: LIFUInterface | None = None
