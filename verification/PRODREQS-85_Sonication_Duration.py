@@ -867,6 +867,9 @@ class TestSonicationDuration:
                              self.duration_msec, 
                              self.interval_msec, 
                              test_case_parameters["max_starting_temperature"])
+            
+            self.test_case_start_time = time.time()
+
             try:
                 if not self.hw_simulate:
                     self.connect_device()
@@ -885,8 +888,6 @@ class TestSonicationDuration:
                     self.sequence_duration = TEST_CASE_DURATION_SECONDS
                 
                 self.configure_solution()
-
-                self.test_case_start_time = time.time()
 
                 # Start sonication
                 if not self.hw_simulate:
