@@ -171,6 +171,8 @@ class TestSonicationDuration:
         self.use_external_power = self.args.external_power
         self.hw_simulate = self.args.simulate
         self.test_runthrough = self.args.test_runthrough
+        self.bypass_console_fw = self.args.bypass_console_fw
+        self.bypass_tx_fw = self.args.bypass_tx_fw
 
         # Safety parameters from args
         self.console_shutoff_temp_C = self.args.console_shutoff_temp
@@ -387,7 +389,7 @@ class TestSonicationDuration:
             if not self.args.external_power:
                 console_fw = self.interface.hvcontroller.get_version()
                 self.logger.info("Console Firmware Version: %s", console_fw)
-            if console_fw != REQUIRED_CONSOLE_FW_VERSION:
+            if not self.args.bypass_console_fw and console_fw != REQUIRED_CONSOLE_FW_VERSION:
                 self.logger.error("Console firmware version %s does not match required version %s.",
                                 console_fw, REQUIRED_CONSOLE_FW_VERSION)
                 console_fw_mismatch = True
@@ -398,7 +400,7 @@ class TestSonicationDuration:
             for i in range(1, self.num_modules+1):
                 tx_fw = self.interface.txdevice.get_version(module=i)
                 self.logger.info("TX Device %d Firmware Version: %s", i, tx_fw)
-                if tx_fw != REQUIRED_TX_FW_VERSION:
+                if not self.args.bypass_tx_fw and tx_fw != REQUIRED_TX_FW_VERSION:
                     self.logger.error("TX firmware version %s does not match required version %s.",
                                     tx_fw, REQUIRED_TX_FW_VERSION)
                     tx_fw_mismatch = True
@@ -1115,6 +1117,16 @@ Examples:
         "--test-runthrough",
         action="store_true",
         help="Run through all test cases with short duration for testing script functionality.",
+    )
+    behavior_group.add_argument(
+        "--bypass-console-fw",
+        action="store_true",
+        help="Bypass console firmware version check.",
+    )
+    behavior_group.add_argument(
+        "--bypass-tx-fw",
+        action="store_true",
+        help="Bypass TX firmware version check.",
     )
     behavior_group.add_argument(
         "--num-modules",
