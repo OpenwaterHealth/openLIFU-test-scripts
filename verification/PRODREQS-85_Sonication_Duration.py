@@ -39,8 +39,10 @@ Thermal Stress Test Script
 - Logs temperature and device status.
 """
 
-__version__ = "1.0.0"
+__version__ = "1.0.3"
 TEST_ID = Path(__file__).name.replace(".py", "")
+REQUIRED_CONSOLE_FW_VERSION = "v1.2.2"
+REQUIRED_TX_FW_VERSION = "v2.0.3"
 
 # ------------------- Test Case Definitions ------------------- #
 TEST_CASES = [
@@ -77,6 +79,8 @@ TEST_CASE_DURATION_SECONDS = 10 * 60
 TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_SECONDS = 5 * 60
 LOW_VOLTAGE_VALUE = 20
 LOW_VOLTAGE_VALUE_TEST_DURATION_SECONDS = 60
+
+SHORT_TEST_DURATION_SECONDS = 20
 
 # Pulse/sequence timing
 INTERVAL_MSEC = {1: 100, 2: 200}  # Default to 100 ms interval
@@ -166,6 +170,7 @@ class TestSonicationDuration:
         # Flags from args
         self.use_external_power = self.args.external_power
         self.hw_simulate = self.args.simulate
+        self.test_runthrough = self.args.test_runthrough
 
         # Safety parameters from args
         self.console_shutoff_temp_C = self.args.console_shutoff_temp
@@ -375,19 +380,37 @@ class TestSonicationDuration:
             self.logger.error("Interface not connected for firmware version retrieval.")
             return
 
+        console_fw_mismatch = False
+        tx_fw_mismatch = False
+        
         try:
             if not self.args.external_power:
                 console_fw = self.interface.hvcontroller.get_version()
                 self.logger.info("Console Firmware Version: %s", console_fw)
+            if console_fw != REQUIRED_CONSOLE_FW_VERSION:
+                self.logger.error("Console firmware version %s does not match required version %s.",
+                                console_fw, REQUIRED_CONSOLE_FW_VERSION)
+                console_fw_mismatch = True
         except Exception as e:
             self.logger.error("Error retrieving console firmware version: %s", e)
-
+                
         try:
             for i in range(1, self.num_modules+1):
                 tx_fw = self.interface.txdevice.get_version(module=i)
                 self.logger.info("TX Device %d Firmware Version: %s", i, tx_fw)
+                if tx_fw != REQUIRED_TX_FW_VERSION:
+                    self.logger.error("TX firmware version %s does not match required version %s.",
+                                    tx_fw, REQUIRED_TX_FW_VERSION)
+                    tx_fw_mismatch = True
         except Exception as e:
-            self.logger.error("Error retrieving TX device firmware version: %s", e)
+            self.logger.error("Error retrieving TX device firmware version: %s", e)        
+
+        if console_fw_mismatch or tx_fw_mismatch:
+            if console_fw_mismatch:
+                self.logger.error("\n\n!! Incompatible console firmware version, please upgrade to %s !!\n\n", REQUIRED_CONSOLE_FW_VERSION)
+            if tx_fw_mismatch:
+                self.logger.error("\n\n!! Incompatible TX firmware version, please upgrade to %s !!\n\n", REQUIRED_TX_FW_VERSION)
+            sys.exit()
 
     def enumerate_devices(self):
         """Enumerate TX7332 devices and verify count."""
@@ -707,6 +730,11 @@ class TestSonicationDuration:
         """Monitor cooldown period before starting the test."""
         temp = self.interface.txdevice.get_temperature()  # Initial read to populate temperature
         self.logger.info(f"Initial TX temperature: {temp}C")
+
+        if self.test_runthrough:
+            starting_temperature = 60.0  # Bypass temperature
+
+        counter = 0
         while temp > starting_temperature:
             self.logger.info(f"Current temperature of {temp}C is greater than max starting "
                              f"temperature of {starting_temperature}C for test case {test_case}. "
@@ -717,6 +745,10 @@ class TestSonicationDuration:
             self.connect_device()
             self.verify_communication()
             temp = self.interface.txdevice.get_temperature()  # Update temperature after cooldown
+            counter += 1
+
+        if counter > 0:
+            self.logger.info(f"TX module took {counter * TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_SECONDS // 60} minutes to cool down to starting temperature of {starting_temperature}C.")
         
         self.logger.info(f"TX temperature of {temp}C is within the allowed starting temperature of {starting_temperature}C. Proceeding with test case {test_case}.")
 
@@ -797,7 +829,7 @@ class TestSonicationDuration:
                 for i, tc in enumerate(TEST_CASES[self.starting_test_case-1:], start=self.starting_test_case)
             )
             + "\n\nThe script will account for cooldown periods as needed between test cases. \n" \
-            f"Each test case will run for {TEST_CASE_DURATION_SECONDS/60:.2f} minutes. \n"
+            f"Each test case will run for {self.sequence_duration/60:.2f} minutes. \n"
             f"The lower voltage tests starting at {LOW_VOLTAGE_VALUE}V and below will run for {LOW_VOLTAGE_VALUE_TEST_DURATION_SECONDS} seconds. \n"
             "Approximate test duration is 24hrs.\n"
         )
@@ -882,7 +914,9 @@ class TestSonicationDuration:
                 else:
                     self.logger.info("Hardware simulation enabled; skipping device configuration.")
 
-                if self.voltage is not None and self.voltage <= LOW_VOLTAGE_VALUE:
+                if self.test_runthrough:
+                    self.sequence_duration = SHORT_TEST_DURATION_SECONDS
+                elif self.voltage is not None and self.voltage <= LOW_VOLTAGE_VALUE:
                     self.sequence_duration = LOW_VOLTAGE_VALUE_TEST_DURATION_SECONDS
                 else:
                     self.sequence_duration = TEST_CASE_DURATION_SECONDS
@@ -992,6 +1026,12 @@ class TestSonicationDuration:
                 elif test_status == "voltage deviation":
                     self.logger.info("TEST CASE %d FAILED.", self.test_case_num)
                     self.test_results[self.test_case_num] = "FAILED (voltage deviation)"
+                elif test_status == "error":
+                    self.logger.info("TEST CASE %d FAILED due to error.", self.test_case_num)
+                    self.test_results[self.test_case_num] = "FAILED (error)"
+                elif test_status == "not started":
+                    self.logger.info("TEST CASE %d NOT RUN.", self.test_case_num)
+                    self.test_results[self.test_case_num] = "NOT RUN"
                 else:
                     self.logger.info(
                         "TEST CASE %d FAILED due to unexpected error.",
@@ -1070,6 +1110,11 @@ Examples:
         "--simulate",
         action="store_true",
         help="Hardware simulation mode (no actual device I/O or HV changes).",
+    )
+    behavior_group.add_argument(
+        "--test-runthrough",
+        action="store_true",
+        help="Run through all test cases with short duration for testing script functionality.",
     )
     behavior_group.add_argument(
         "--num-modules",
