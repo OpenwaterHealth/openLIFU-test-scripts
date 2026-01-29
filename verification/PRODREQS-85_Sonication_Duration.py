@@ -484,35 +484,6 @@ class TestSonicationDuration:
 
         self.logger.info("Solution configured for Test Case %s.", self.test_case_num)
 
-    # def start_monitoring_threads(self) -> None:
-
-    #     self.shutdown_event.clear()
-    #     self.sequence_complete_event.clear()
-    #     self.temperature_shutdown_event.clear()
-    #     self.voltage_shutdown_event.clear()
-
-    #     temp_thread = threading.Thread(
-    #         target=self.monitor_temperature,
-    #         name="TemperatureMonitorThread",
-    #         daemon=True,
-    #     )
-    #     completion_thread = threading.Thread(
-    #         target=self.exit_on_time_complete,
-    #         args=(self.sequence_duration,),
-    #         name="SequenceCompletionThread",
-    #         daemon=True,
-    #     )
-
-    #     voltage_thread = threading.Thread(
-    #         target=self.monitor_console_voltage,
-    #         name="ConsoleVoltageMonitorThread",
-    #         daemon=True,
-    #     )
-    #     voltage_thread.start()
-
-    #     temp_thread.start()
-    #     completion_thread.start()
-
     def monitor_console_voltage(self) -> None:
         """Thread target: monitor console voltage."""
         if self.hw_simulate:
