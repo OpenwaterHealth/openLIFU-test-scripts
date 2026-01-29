@@ -48,7 +48,7 @@ REQUIRED_TX_FW_VERSION = "v2.0.3"
 TEST_CASES = [
     {"voltage": 65, "duty_cycle": 5,  "PRI_ms": 100, "max_starting_temperature": 40},
     {"voltage": 60, "duty_cycle": 10, "PRI_ms": 100, "max_starting_temperature": 40},
-    {"voltage": 55, "duty_cycle": 15, "PRI_ms": 100, "max_starting_temperature": 40},
+    {"voltage": 55, "duty_cycle": 15, "PRI_ms": 100, "max_starting_temperature": 35},
     {"voltage": 50, "duty_cycle": 20, "PRI_ms": 100, "max_starting_temperature": 30},
     {"voltage": 45, "duty_cycle": 25, "PRI_ms": 100, "max_starting_temperature": 30},
     {"voltage": 40, "duty_cycle": 30, "PRI_ms": 100, "max_starting_temperature": 30},
