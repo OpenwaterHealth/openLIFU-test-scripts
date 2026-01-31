@@ -93,7 +93,7 @@ TX_SHUTOFF_TEMP_C_DEFAULT = 70.0
 AMBIENT_SHUTOFF_TEMP_C_DEFAULT = 70.0
 
 # Voltage deviation limits
-VOLTAGE_DEVIATION_ABSOLUTE_VALUE_LIMIT = 3.0
+VOLTAGE_DEVIATION_ABSOLUTE_VALUE_LIMIT = 2.0
 VOLTAGE_DEVIATION_PERCENTAGE_LIMIT = 2.0
 
 # Temperature monitoring intervals
@@ -522,28 +522,6 @@ class TestSonicationDuration:
             # Read temperatures
             try:
                 if not self.use_external_power:
-                    # with self.mutex:
-                    #     console_voltage = self.interface.hvcontroller.get_voltage()
-                    #     deviation_limit_percentage = self.voltage * VOLTAGE_DEVIATION_PERCENTAGE_LIMIT / 100
-                    #     deviation_limit_absolute_value = VOLTAGE_DEVIATION_ABSOLUTE_VALUE_LIMIT
-                    #     deviation_limit_v = max(deviation_limit_percentage, deviation_limit_absolute_value)
-                        
-                    #     deviation_pct = abs(console_voltage - self.voltage) / self.voltage * 100
-
-                    #     if delta_v > deviation_limit_v:
-                    #         self.logger.warning(
-                    #             "Console voltage %.2f V deviates %.2f%% (%.2f V), exceeding limit %.2f V "
-                    #             "(max of %.2f%% or %.1f V) from expected %.2f V.",
-                    #             console_voltage,
-                    #             deviation_pct,
-                    #             delta_v,
-                    #             deviation_limit_v,
-                    #             VOLTAGE_DEVIATION_PERCENTAGE_LIMIT,
-                    #             deviation_limit_absolute_value,
-                    #             self.voltage,
-                    #         )
-                    #         break
-
                     with self.mutex:
                         console_voltage = self.interface.hvcontroller.get_voltage()
 
@@ -566,7 +544,7 @@ class TestSonicationDuration:
                                 deviation_limit_absolute_value,
                                 self.voltage,
                             )
-                            # break
+                            # break #uncomment when ADC error resolved
 
             except SerialException as e:
                 self.logger.error("SerialException encountered while reading console voltage: %s", e)
@@ -721,31 +699,35 @@ class TestSonicationDuration:
             counter += 1
 
         if counter > 0:
-            self.logger.info(f"TX module took {counter * TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_SECONDS // 60} minutes to cool down to starting temperature of {starting_temperature}C.")
+            self.logger.info(f"TX module took ~{counter * TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_SECONDS // 60} minutes to cool down to starting temperature of {starting_temperature}C.")
         
         self.logger.info(f"TX temperature of {temp}C is within the allowed starting temperature of {starting_temperature}C. Proceeding with test case {test_case}.")
 
-    def exit_on_time_complete(self, total_test_time: float) -> None:
+    def exit_on_time_complete(self) -> None:
         """Thread target: stop test when total test time is reached."""
-        start = time.time()
-        last_log_time = 0.0
+        if self.shutdown_event.wait(self.sequence_duration):
+            return
+        self.logger.info("Sequence complete: %s reached.", format_hhmmss(self.sequence_duration))
+        self.sequence_complete_event.set()
+        self.shutdown_event.set()
+        # start = time.time()
 
-        while True:
-            if self.shutdown_event.is_set():
-                return
+        # while True:
+        #     if self.shutdown_event.is_set():
+        #         return
 
-            time.sleep(.1)
-            elapsed_time = time.time() - start
-            # time_since_last_log = elapsed_time - last_log_time
+        #     time.sleep(.1)
+        #     elapsed_time = time.time() - start
+        #     # time_since_last_log = elapsed_time - last_log_time
 
-            if elapsed_time >= total_test_time:
-                self.logger.info(
-                    "  Sequence complete: %s reached.",
-                    format_hhmmss(total_test_time),
-                )
-                self.shutdown_event.set()
-                self.sequence_complete_event.set()
-                return
+        #     if elapsed_time >= self.sequence_duration:
+        #         self.logger.info(
+        #             "  Sequence complete: %s reached.",
+        #             format_hhmmss(self.sequence_duration),
+        #         )
+        #         self.sequence_complete_event.set()
+        #         self.shutdown_event.set()
+        #         return
 
     # ------------------------------------------------------------------ #
     # Hardware shutdown & cleanup
@@ -833,7 +815,7 @@ class TestSonicationDuration:
             f"{sum(1 for r in self.test_results.values() if r == 'PASSED')} out of {len(TEST_CASES)-self.starting_test_case+1} test cases passed."
         )
 
-        self.logger.info(f"Script ran for a total of {format_duration(time.time() - self.start_time)} minutes.")
+        self.logger.info(f"Script ran for a total of {format_duration(time.time() - self.start_time)}.")
 
         self.logger.info(
             "\n\nOVERALL RESULT: %s\n",
@@ -872,8 +854,8 @@ class TestSonicationDuration:
                              self.duration_msec, 
                              self.interval_msec, 
                              test_case_parameters["max_starting_temperature"])
-            
-            self.test_case_start_time = time.time()
+
+            test_case_start_time = 0
 
             try:
                 if not self.hw_simulate:
@@ -903,6 +885,7 @@ class TestSonicationDuration:
                         self.logger.error("Failed to start trigger.")
                         test_status = "error"
                         return
+                    test_case_start_time = time.time()
                 else:
                     self.logger.info("Simulated Trigger start... (no hardware)")
 
@@ -918,18 +901,17 @@ class TestSonicationDuration:
                 temp_thread = threading.Thread(
                     target=self.monitor_temperature,
                     name="TemperatureMonitorThread",
-                    daemon=True,
+                    # daemon=True,
                 )
                 completion_thread = threading.Thread(
                     target=self.exit_on_time_complete,
-                    args=(self.sequence_duration,),
                     name="SequenceCompletionThread",
-                    daemon=True,
+                    # daemon=True,
                 )
                 voltage_thread = threading.Thread(
                     target=self.monitor_console_voltage,
                     name="ConsoleVoltageMonitorThread",
-                    daemon=True,
+                    # daemon=True,
                 )
                 
                 voltage_thread.start()
@@ -938,10 +920,7 @@ class TestSonicationDuration:
 
                 # Wait for threads or user interrupt
                 try:
-                    while temp_thread.is_alive() and\
-                        completion_thread.is_alive() and\
-                        voltage_thread.is_alive() and\
-                        not self.shutdown_event.is_set():
+                    while not self.shutdown_event.is_set():
                         time.sleep(0.1)
                 except KeyboardInterrupt:
                     self.logger.warning("Test aborted by user KeyboardInterrupt.")
@@ -964,9 +943,9 @@ class TestSonicationDuration:
                         self.logger.error("Error stopping trigger: %s", e)
 
                 # Wait for threads to exit gracefully
-                temp_thread.join(timeout=2.0)
-                completion_thread.join(timeout=2.0)
-                voltage_thread.join(timeout=2.0)
+                temp_thread.join(timeout=3.0)
+                voltage_thread.join(timeout=3.0)
+                completion_thread.join(timeout=3.0)
 
                 # Determine final status
                 if test_status not in ("aborted by user", "error"):
@@ -1012,7 +991,7 @@ class TestSonicationDuration:
                     )
                     self.test_results[self.test_case_num] = "FAILED (unexpected error)"
 
-                self.logger.info("TEST CASE %d ran for a total of %s.", self.test_case_num, format_duration(time.time() - self.test_case_start_time))
+                self.logger.info("TEST CASE %d ran for a total of %s.", self.test_case_num, format_duration(time.time() - test_case_start_time) if test_case_start_time else "0s")
 
         self.print_test_summary()    
 
