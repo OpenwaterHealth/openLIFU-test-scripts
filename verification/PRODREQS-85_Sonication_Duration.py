@@ -124,12 +124,14 @@ def format_hhmmss(seconds: float) -> str:
         return f"{hours:d}:{minutes:02d}:{secs:02d}"
     return f"{minutes:02d}:{secs:02d}"
 
+'''TODO:
 def calculate_temperature_discharge_time_seconds(final_temp_C: float) -> float:
     """Estimate time to discharge temperature to safe levels (dummy implementation)."""
     # Placeholder: Implement a realistic model based on device thermal characteristics
     baseline_temp_C = 30.0
     minutes = 1
     return 60.0*minutes # temp value until formula figured out
+'''
 
 class TestSonicationDuration:
     """Main class for Thermal Stress Test 5."""
@@ -219,26 +221,31 @@ class TestSonicationDuration:
 
     def _attach_file_handler(self) -> None:
         """Attach a file handler for this run once test case is known."""
-        if self._file_handler_attached:
-            return
+        if not self.args.skip_logfile:
+            if self._file_handler_attached:
+                return
 
-        self.log_dir.mkdir(parents=True, exist_ok=True)
+            self.log_dir.mkdir(parents=True, exist_ok=True)
 
-        filename = f"{self.run_timestamp}_{TEST_ID}_{self.frequency_khz}kHz.log"
+            filename = f"{self.run_timestamp}_{TEST_ID}_{self.frequency_khz}kHz.log"
 
-        log_path = self.log_dir / filename
+            log_path = self.log_dir / filename
 
-        formatter = SafeFormatter(
-            "%(asctime)s - %(levelname)s - %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-        )
+            formatter = SafeFormatter(
+                "%(asctime)s - %(levelname)s - %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S",
+            )
 
-        file_handler = logging.FileHandler(log_path, mode="w", encoding="utf-8")
-        file_handler.setFormatter(formatter)
-        logging.getLogger(__name__).addHandler(file_handler)
+            file_handler = logging.FileHandler(log_path, mode="w", encoding="utf-8")
+            file_handler.setFormatter(formatter)
+            logging.getLogger(__name__).addHandler(file_handler)
 
-        self._file_handler_attached = True
-        self.logger.info("Run log will be saved to: %s", log_path)
+            self._file_handler_attached = True
+            self.logger.info("Run log will be saved to: %s", log_path)
+        else:
+            self.logger.info("User elected to skip logging to file - logs will only be output to console.")
+
+
 
     # ------------------- User Input Section ------------------- #
     def _select_frequency(self) -> None:
@@ -783,8 +790,6 @@ class TestSonicationDuration:
 
         self.logger.info("--------------------------------------------------------------------------------")
         self.logger.info(
-            # "\n\nThis script will automatically go through all of the following test cases:\n"
-            # + "\n".join(
             "\n\nThis script will automatically cycle through all of the following test cases:\n\n"
             + "\n".join(
                 f"Test Case {i:>2}: "
@@ -810,8 +815,8 @@ class TestSonicationDuration:
             r = self.test_results.get(test_case)
             act_start  = f"{r.starting_temperature:.2f}C" if r and r.starting_temperature is not None else "N/A"
             final      = f"{r.final_temperature:.2f}C" if r and r.final_temperature is not None else "N/A"
-            max_dv     = f"{r.max_voltage_deviation_absolute:.2f}" if r and r.max_voltage_deviation_absolute is not None else "N/A"
-            max_dv_pct = f"{r.max_voltage_deviation_percentage:.2f}" if r and r.max_voltage_deviation_percentage is not None else "N/A"
+            max_dv     = f"{r.max_voltage_deviation_absolute:.2f}V" if r and r.max_voltage_deviation_absolute is not None else "N/A"
+            max_dv_pct = f"{r.max_voltage_deviation_percentage:.2f}%" if r and r.max_voltage_deviation_percentage is not None else "N/A"
             dur        = format_hhmmss(r.test_time_elapsed) if r and r.test_time_elapsed is not None else "N/A"
             status     = r.status if r and getattr(r, "status", None) else "NOT RUN"
             
@@ -822,11 +827,11 @@ class TestSonicationDuration:
                 f"{test_case_parameters['duty_cycle']:>2}% DC, "
                 f"{test_case_parameters['PRI_ms']:>2}ms PRI, "
                 f"Max Start Temp: {test_case_parameters['max_starting_temperature']:>2}C, "
-                f"Actual Start Temp: {act_start:>5}, "
+                f"Actual Start Temp: {act_start:>6}, "
                 f"Final Temp: {final:>6}, "
                 f"Max Allowed Voltage Deviation: {VOLTAGE_DEVIATION_ABSOLUTE_VALUE_LIMIT:>3}V ({VOLTAGE_DEVIATION_PERCENTAGE_LIMIT:>3}%), "
-                f"Actual Voltage Deviation: {max_dv:>4}" + f"({max_dv_pct:>5}%), "
-                f"Duration Run: {dur:>4}  --> "
+                f"Actual Voltage Deviation: {max_dv:>5} ({max_dv_pct:>5}) "
+                f"Duration Run: {dur:>5}  --> "
                 f"{status}" + ("\n" if test_case == len(TEST_CASES) / 2 else "")
             )
 
@@ -1216,13 +1221,12 @@ Examples:
     # Automation
     automation_group = parser.add_argument_group("Automation")
     automation_group.add_argument(
-        "--no-prompt",
+        "--skip-logfile",
         action="store_true",
-        help='Skip "Press ENTER to start" prompt and begin immediately.',
+        help="Do not attach file handler to logger (console only).",
     )
 
     return parser.parse_args()
-
 
 def main() -> None:
     """Main entry point for the script."""
