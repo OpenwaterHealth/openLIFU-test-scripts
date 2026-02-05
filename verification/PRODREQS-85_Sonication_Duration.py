@@ -19,6 +19,7 @@ import threading
 import time
 from datetime import datetime
 from pathlib import Path
+from dataclasses import dataclass
 
 from serial.serialutil import SerialException
 
@@ -165,7 +166,7 @@ class TestSonicationDuration:
 
         self.sequence_duration: float = TEST_CASE_DURATION_SECONDS
         self.starting_test_case: int = 1
-        self.test_results: dict[int, str] = {}
+        self.test_results: dict[int, TestCaseResult] = {}
 
         # Flags from args
         self.use_external_power = self.args.external_power
@@ -532,6 +533,10 @@ class TestSonicationDuration:
                         delta_v = abs(console_voltage - self.voltage)
                         deviation_pct = delta_v / self.voltage * 100
 
+                        self.test_results[self.test_case_num].max_voltage_deviation_absolute = delta_v
+                        self.test_results[self.test_case_num].max_voltage_deviation_percentage = deviation_pct
+                        # self.test_results[self.test_case_num].test_time_elapsed = time_elapsed
+                        
                         if delta_v > deviation_limit_v:
                             self.logger.warning(
                                 "Console voltage %.2f V deviates %.2f%% (%.2f V), exceeding limit %.2f V "
@@ -591,91 +596,97 @@ class TestSonicationDuration:
         prev_amb_temp = None
         prev_con_temp = None
 
-        while True:
-            if self.shutdown_event.is_set():
-                return
+        try:
+            while True:
+                if self.shutdown_event.is_set():
+                    return
 
-            time_elapsed = time.time() - start_time
+                time_elapsed = time.time() - start_time
 
-            # Read temperatures
-            try:
-                if not self.use_external_power:
-                    if prev_con_temp is None:
+                # Read temperatures
+                try:
+                    if not self.use_external_power:
+                        if prev_con_temp is None:
+                            with self.mutex:
+                                prev_con_temp = self.interface.hvcontroller.get_temperature1()
                         with self.mutex:
-                            prev_con_temp = self.interface.hvcontroller.get_temperature1()
+                            con_temp = self.interface.hvcontroller.get_temperature1()
+                    else:
+                        con_temp = None
+
+                    if prev_tx_temp is None:
+                        with self.mutex:
+                            prev_tx_temp = self.interface.txdevice.get_temperature()
                     with self.mutex:
-                        con_temp = self.interface.hvcontroller.get_temperature1()
-                else:
-                    con_temp = None
+                        tx_temp = self.interface.txdevice.get_temperature()
 
-                if prev_tx_temp is None:
-                    with self.mutex:
-                        prev_tx_temp = self.interface.txdevice.get_temperature()
-                with self.mutex:
-                    tx_temp = self.interface.txdevice.get_temperature()
+                    if prev_amb_temp is None:
+                        with self.mutex:
+                            prev_amb_temp = self.interface.txdevice.get_ambient_temperature()
+                    with self.mutex:    
+                        amb_temp = self.interface.txdevice.get_ambient_temperature()
 
-                if prev_amb_temp is None:
-                    with self.mutex:
-                        prev_amb_temp = self.interface.txdevice.get_ambient_temperature()
-                with self.mutex:    
-                    amb_temp = self.interface.txdevice.get_ambient_temperature()
+                except SerialException as e:
+                    self.logger.error("SerialException encountered while reading temperatures: %s", e)
+                    break
+                except Exception as e:
+                    self.logger.error("Unexpected error while reading temperatures: %s", e)
+                    break
 
-            except SerialException as e:
-                self.logger.error("SerialException encountered while reading temperatures: %s", e)
-                break
-            except Exception as e:
-                self.logger.error("Unexpected error while reading temperatures: %s", e)
-                break
+                # Periodic logging
+                time_since_last_log = time_elapsed - last_log_time
+                if time_since_last_log >= self.temperature_log_interval:
+                    last_log_time = time_elapsed
+                    if not self.use_external_power and con_temp is not None:
+                        self.logger.info(
+                            "  Console Temp: %.2f°C, TX Temp: %.2f°C, Ambient Temp: %.2f°C",
+                            con_temp,
+                            tx_temp,
+                            amb_temp,
+                        )
+                    else:
+                        self.logger.info(
+                            "  TX Temp: %.2f°C, Ambient Temp: %.2f°C",
+                            tx_temp,
+                            amb_temp,
+                        )
 
-            # Periodic logging
-            time_since_last_log = time_elapsed - last_log_time
-            if time_since_last_log >= self.temperature_log_interval:
-                last_log_time = time_elapsed
-                if not self.use_external_power and con_temp is not None:
-                    self.logger.info(
-                        "  Console Temp: %.2f°C, TX Temp: %.2f°C, Ambient Temp: %.2f°C",
+                # Absolute temperature thresholds
+                if (not self.use_external_power and con_temp is not None and
+                        con_temp > self.console_shutoff_temp_C):
+                    self.logger.warning(
+                        "Console temperature %.2f°C exceeds shutoff threshold %.2f°C.",
                         con_temp,
-                        tx_temp,
-                        amb_temp,
+                        self.console_shutoff_temp_C,
                     )
-                else:
-                    self.logger.info(
-                        "  TX Temp: %.2f°C, Ambient Temp: %.2f°C",
+                    break
+
+                if tx_temp > self.tx_shutoff_temp_C:
+                    self.logger.warning(
+                        "TX device temperature %.2f°C exceeds shutoff threshold %.2f°C.",
                         tx_temp,
-                        amb_temp,
+                        self.tx_shutoff_temp_C,
                     )
+                    break
 
-            # Absolute temperature thresholds
-            if (not self.use_external_power and con_temp is not None and
-                    con_temp > self.console_shutoff_temp_C):
-                self.logger.warning(
-                    "Console temperature %.2f°C exceeds shutoff threshold %.2f°C.",
-                    con_temp,
-                    self.console_shutoff_temp_C,
-                )
-                break
+                if amb_temp > self.ambient_shutoff_temp_C:
+                    self.logger.warning(
+                        "Ambient temperature %.2f°C exceeds shutoff threshold %.2f°C.",
+                        amb_temp,
+                        self.ambient_shutoff_temp_C,
+                    )
+                    break
 
-            if tx_temp > self.tx_shutoff_temp_C:
-                self.logger.warning(
-                    "TX device temperature %.2f°C exceeds shutoff threshold %.2f°C.",
-                    tx_temp,
-                    self.tx_shutoff_temp_C,
-                )
-                break
+                time.sleep(self.temperature_check_interval)
+            self.logger.warning("Temperature shutdown triggered.")
+            self.shutdown_event.set()
+            self.temperature_shutdown_event.set()
 
-            if amb_temp > self.ambient_shutoff_temp_C:
-                self.logger.warning(
-                    "Ambient temperature %.2f°C exceeds shutoff threshold %.2f°C.",
-                    amb_temp,
-                    self.ambient_shutoff_temp_C,
-                )
-                break
-
-            time.sleep(self.temperature_check_interval)
-
-        self.logger.warning("Temperature shutdown triggered.")
-        self.shutdown_event.set()
-        self.temperature_shutdown_event.set()
+        finally:
+            self.test_results[self.test_case_num].final_temperature = tx_temp
+            self.test_results[self.test_case_num].test_time_elapsed = time_elapsed
+            print(self.test_results[self.test_case_num].final_temperature)
+            print(self.test_results[self.test_case_num].test_time_elapsed)
 
     def _verify_start_conditions(self, test_case, starting_temperature) -> None:
         """Monitor cooldown period before starting the test."""
@@ -700,8 +711,10 @@ class TestSonicationDuration:
 
         if counter > 0:
             self.logger.info(f"TX module took ~{counter * TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_SECONDS // 60} minutes to cool down to starting temperature of {starting_temperature}C.")
+            self.test_results[test_case].cooldown_time_elapsed = counter * TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_SECONDS // 60
         
         self.logger.info(f"TX temperature of {temp}C is within the allowed starting temperature of {starting_temperature}C. Proceeding with test case {test_case}.")
+        self.test_results[test_case].starting_temperature = temp 
 
     def exit_on_time_complete(self) -> None:
         """Thread target: stop test when total test time is reached."""
@@ -792,19 +805,31 @@ class TestSonicationDuration:
 
     def print_test_summary(self) -> None:
         self.logger.info("--------------------------------------------------------------------------------")
-        self.logger.info(
-            "\n\nTest Case Summary:\n\n"
-            + "\n".join(
+        self.logger.info("\n\nTest Case Summary:\n")
+
+        for i, tc in enumerate(TEST_CASES[self.starting_test_case - 1:], start=self.starting_test_case):
+            r = self.test_results.get(i)
+            act_start  = f"{r.starting_temperature:.1f}C" if r and r.starting_temperature is not None else "N/A"
+            final      = f"{r.final_temperature:.1f}C" if r and r.final_temperature is not None else "N/A"
+            max_dv     = f"{r.max_voltage_deviation_absolute:.2f}" if r and r.max_voltage_deviation_absolute is not None else "N/A"
+            max_dv_pct = f"{r.max_voltage_deviation_percentage:.2f}" if r and r.max_voltage_deviation_percentage is not None else "N/A"
+            dur        = format_hhmmss(r.test_time_elapsed) if r and r.test_time_elapsed is not None else "N/A"
+            status     = r.status if r and getattr(r, "status", None) else "NOT RUN"
+            
+            
+            self.logger.info(
                 f"Test Case {i:>2}: "
-                f"{tc['voltage']:>3}V, "
-                f"{tc['duty_cycle']:>3}% Duty Cycle, "
-                f"{tc['PRI_ms']:>4}ms PRI, "
-                f"Max Starting Temperature: {tc['max_starting_temperature']:>3}C  --> "
-                f"{self.test_results.get(i, 'NOT RUN')}"
-                + ("\n" if i == len(TEST_CASES)/2 else "")
-                for i, tc in enumerate(TEST_CASES[self.starting_test_case-1:], start=self.starting_test_case)
-            ) + "\n"
-        )
+                f"{tc['voltage']:>2}V, "
+                f"{tc['duty_cycle']:>2}% DC, "
+                f"{tc['PRI_ms']:>2}ms PRI, "
+                f"Max Start Temp: {tc['max_starting_temperature']:>2}C, "
+                f"Actual Start Temp: {act_start:>5}, "
+                f"Final Temp: {final:>5}, "
+                f"Max Voltage Deviation: {VOLTAGE_DEVIATION_ABSOLUTE_VALUE_LIMIT:>3}V ({VOLTAGE_DEVIATION_PERCENTAGE_LIMIT:>3}%), "
+                f"Actual Voltage Deviation: {max_dv:>4}" + "({max_dv_pct:>5}%), "
+                f"Duration Run: {dur:>4}  --> "
+                f"{status}" + ("\n" if i == len(TEST_CASES) / 2 else "")
+            )
 
         all_passed = all(
             self.test_results.get(i) == "PASSED"
@@ -842,6 +867,7 @@ class TestSonicationDuration:
 
         for test_case, test_case_parameters in enumerate(TEST_CASES[self.starting_test_case-1:], start=self.starting_test_case):
             self.test_case_num = test_case
+            self.test_results[self.test_case_num] = TestCaseResult()
             self.voltage = float(test_case_parameters["voltage"])
             self.interval_msec = int(test_case_parameters["PRI_ms"])
             self.duration_msec = int(test_case_parameters["duty_cycle"] / 100 * self.interval_msec)
@@ -861,10 +887,12 @@ class TestSonicationDuration:
                 if not self.hw_simulate:
                     self.connect_device()
                     self.verify_communication()
+
                     # if test has already run at least once, skip
                     if test_case == self.starting_test_case: 
                         self.get_firmware_versions()
                         self.enumerate_devices()
+                        
                     self._verify_start_conditions(test_case, test_case_parameters["max_starting_temperature"])
                 else:
                     self.logger.info("Hardware simulation enabled; skipping device configuration.")
@@ -959,6 +987,9 @@ class TestSonicationDuration:
                         test_status = "error"
 
             finally:
+                # Record test time
+                # self.test_results[self.test_case_num].test_time_elapsed = time.time() - test_case_start_time if test_case_start_time else 0
+                
                 # Power down and cleanup
                 if not self.hw_simulate:
                     with contextlib.suppress(Exception):
@@ -968,22 +999,22 @@ class TestSonicationDuration:
                 # Final status log
                 if test_status == "passed":
                     self.logger.info("TEST CASE %d PASSED.", self.test_case_num)
-                    self.test_results[self.test_case_num] = "PASSED"
+                    self.test_results[self.test_case_num].status = "PASSED"
                 elif test_status == "temperature shutdown":
                     self.logger.info("TEST CASE %d FAILED.", self.test_case_num)
-                    self.test_results[self.test_case_num] = "FAILED (temperature shutdown)"
+                    self.test_results[self.test_case_num].status = "FAILED (temperature shutdown)"
                 elif test_status == "aborted by user":
                     self.logger.info("TEST CASE %d ABORTED by user.", self.test_case_num)
-                    self.test_results[self.test_case_num] = "ABORTED"
+                    self.test_results[self.test_case_num].status = "ABORTED"
                 elif test_status == "voltage deviation":
                     self.logger.info("TEST CASE %d FAILED.", self.test_case_num)
-                    self.test_results[self.test_case_num] = "FAILED (voltage deviation)"
+                    self.test_results[self.test_case_num].status = "FAILED (voltage deviation)"
                 elif test_status == "error":
                     self.logger.info("TEST CASE %d FAILED due to error.", self.test_case_num)
-                    self.test_results[self.test_case_num] = "FAILED (error)"
+                    self.test_results[self.test_case_num].status = "FAILED (error)"
                 elif test_status == "not started":
                     self.logger.info("TEST CASE %d NOT RUN.", self.test_case_num)
-                    self.test_results[self.test_case_num] = "NOT RUN"
+                    self.test_results[self.test_case_num].status = "NOT RUN"
                 else:
                     self.logger.info(
                         "TEST CASE %d FAILED due to unexpected error.",
@@ -994,6 +1025,17 @@ class TestSonicationDuration:
                 self.logger.info("TEST CASE %d ran for a total of %s.", self.test_case_num, format_duration(time.time() - test_case_start_time) if test_case_start_time else "0s")
 
         self.print_test_summary()    
+
+@dataclass
+class TestCaseResult:
+    # self.test_case : int | None = None
+    starting_temperature: float | None = None
+    final_temperature: float | None = None
+    max_voltage_deviation_absolute: float | None = None
+    max_voltage_deviation_percentage: float | None = None
+    test_time_elapsed: float | None = None
+    cooldown_time_elapsed: float | None = None
+    status: str | None = None
 
 def frequency_khz(value: str) -> int:
     ivalue = int(value)
