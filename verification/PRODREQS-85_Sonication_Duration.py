@@ -227,7 +227,7 @@ class TestSonicationDuration:
 
             self.log_dir.mkdir(parents=True, exist_ok=True)
 
-            filename = f"{self.run_timestamp}_{TEST_ID}_{self.frequency_khz}kHz.log"
+            filename = f"{self.run_timestamp}_{TEST_ID}_{self.frequency_khz}kHz_{self.num_modules}x.log"
 
             log_path = self.log_dir / filename
 
@@ -813,12 +813,12 @@ class TestSonicationDuration:
 
         for test_case, test_case_parameters in enumerate(TEST_CASES[self.starting_test_case - 1:], start=self.starting_test_case):
             r = self.test_results.get(test_case)
-            act_start  = f"{r.starting_temperature:.2f}C" if r and r.starting_temperature is not None else "N/A"
-            final      = f"{r.final_temperature:.2f}C" if r and r.final_temperature is not None else "N/A"
-            max_dv     = f"{r.max_voltage_deviation_absolute:.2f}V" if r and r.max_voltage_deviation_absolute is not None else "N/A"
-            max_dv_pct = f"{r.max_voltage_deviation_percentage:.2f}%" if r and r.max_voltage_deviation_percentage is not None else "N/A"
-            cooldown   = f"{r.cooldown_time_elapsed} mins" if r and r.cooldown_time_elapsed is not None else "N/A"
-            dur        = format_hhmmss(r.test_time_elapsed) if r and r.test_time_elapsed is not None else "N/A"
+            act_start  = f"{r.starting_temperature:.2f}C" if r and r.starting_temperature is not None else " -   "
+            final      = f"{r.final_temperature:.2f}C" if r and r.final_temperature is not None else " - "
+            max_dv     = f"{r.max_voltage_deviation_absolute:.2f}V" if r and r.max_voltage_deviation_absolute is not None else " - "
+            max_dv_pct = f"{r.max_voltage_deviation_percentage:.2f}%" if r and r.max_voltage_deviation_percentage is not None else " - "
+            cooldown   = f"~{r.cooldown_time_elapsed} mins" if r and r.cooldown_time_elapsed is not None else " - "
+            dur        = format_hhmmss(r.test_time_elapsed) if r and r.test_time_elapsed is not None else " - "
             status     = r.status if r and getattr(r, "status", None) else "NOT RUN"
             
             
@@ -828,7 +828,7 @@ class TestSonicationDuration:
                 f"{test_case_parameters['duty_cycle']:>2}% DC, "
                 f"{test_case_parameters['PRI_ms']:>2}ms PRI, "
                 f"Max Start Temp: {test_case_parameters['max_starting_temperature']:>2}C, "
-                f"Approx Cooldown: {cooldown:>9}, "
+                f"Cooldown Time: {cooldown:>9}, "
                 f"Actual Start Temp: {act_start:>6}, "
                 f"Final Temp: {final:>6}, "
                 f"Max Allowed Voltage Deviation: {VOLTAGE_DEVIATION_ABSOLUTE_VALUE_LIMIT:>3}V ({VOLTAGE_DEVIATION_PERCENTAGE_LIMIT:>3}%), "
@@ -1031,7 +1031,7 @@ class TestSonicationDuration:
                 duration = time.time() - test_case_start_time if test_case_start_time else 0.0
                 self.test_results[self.test_case_num].test_time_elapsed = duration
                 self.logger.info("TEST CASE %d ran for a total of %s.", self.test_case_num, format_duration(duration))
-                self.test_results[self.test_case_num].cooldown_time_elapsed = 0.0
+                # self.test_results[self.test_case_num].cooldown_time_elapsed = 0.0
 
         self.print_test_summary()    
 
@@ -1043,7 +1043,7 @@ class TestCaseResult:
     max_voltage_deviation_absolute: float | None = None
     max_voltage_deviation_percentage: float | None = None
     test_time_elapsed: float | None = None
-    cooldown_time_elapsed: float | None = None
+    cooldown_time_elapsed: int | None = None
     status: str | None = None
 
 def frequency_khz(value: str) -> int:
