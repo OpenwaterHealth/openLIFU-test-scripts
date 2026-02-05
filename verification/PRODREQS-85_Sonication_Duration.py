@@ -718,7 +718,7 @@ class TestSonicationDuration:
         if counter > 0:
             self.logger.info(f"TX module took ~{counter * TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_SECONDS // 60} minutes to cool down to starting temperature of {starting_temperature}C.")
             self.test_results[test_case].cooldown_time_elapsed = counter * TIME_BETWEEN_TESTS_TEMPERATURE_CHECK_SECONDS // 60
-        
+
         self.logger.info(f"TX temperature of {temp}C is within the allowed starting temperature of {starting_temperature}C. Proceeding with test case {test_case}.")
         self.test_results[test_case].starting_temperature = temp 
 
@@ -817,6 +817,7 @@ class TestSonicationDuration:
             final      = f"{r.final_temperature:.2f}C" if r and r.final_temperature is not None else "N/A"
             max_dv     = f"{r.max_voltage_deviation_absolute:.2f}V" if r and r.max_voltage_deviation_absolute is not None else "N/A"
             max_dv_pct = f"{r.max_voltage_deviation_percentage:.2f}%" if r and r.max_voltage_deviation_percentage is not None else "N/A"
+            cooldown   = f"{r.cooldown_time_elapsed} mins" if r and r.cooldown_time_elapsed is not None else "N/A"
             dur        = format_hhmmss(r.test_time_elapsed) if r and r.test_time_elapsed is not None else "N/A"
             status     = r.status if r and getattr(r, "status", None) else "NOT RUN"
             
@@ -827,6 +828,7 @@ class TestSonicationDuration:
                 f"{test_case_parameters['duty_cycle']:>2}% DC, "
                 f"{test_case_parameters['PRI_ms']:>2}ms PRI, "
                 f"Max Start Temp: {test_case_parameters['max_starting_temperature']:>2}C, "
+                f"Approx Cooldown: {cooldown:>9}, "
                 f"Actual Start Temp: {act_start:>6}, "
                 f"Final Temp: {final:>6}, "
                 f"Max Allowed Voltage Deviation: {VOLTAGE_DEVIATION_ABSOLUTE_VALUE_LIMIT:>3}V ({VOLTAGE_DEVIATION_PERCENTAGE_LIMIT:>3}%), "
