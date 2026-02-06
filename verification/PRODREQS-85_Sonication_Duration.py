@@ -837,22 +837,18 @@ class TestSonicationDuration:
                 f"{status}" + ("\n" if test_case == len(TEST_CASES) / 2 else "")
             )
 
-        all_passed = all(
-            self.test_results.get(test_case) == "PASSED"
-            for test_case in range(self.starting_test_case, len(TEST_CASES) + 1)
-        )
+        passed_count = sum(1 for r in self.test_results.values() if getattr(r, 'status', None) == "PASSED")
 
         self.logger.info(
-            f"{sum(1 for r in self.test_results.values() if r == 'PASSED')} out of {len(TEST_CASES)-self.starting_test_case+1} test cases passed."
+            f"{passed_count} out of {len(TEST_CASES)-self.starting_test_case+1} test cases passed."
         )
 
         self.logger.info(f"Script ran for a total of {format_duration(time.time() - self.start_time)}.")
 
         self.logger.info(
             "\n\nOVERALL RESULT: %s\n",
-            "PASSED" if all_passed else "FAILED",
+            "PASSED" if passed_count == len(TEST_CASES)-self.starting_test_case+1 else "FAILED",
         )
-        # self.logger.info("--------------------------------------------------------------------------------\n\n")
 
     def run(self) -> None:
         """Execute the thermal stress test with graceful shutdown."""
